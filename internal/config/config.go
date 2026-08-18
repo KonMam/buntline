@@ -189,6 +189,15 @@ func Load() (Config, error) {
 	if v := os.Getenv("TETHER_ALLOWED_HOSTS"); v != "" {
 		cfg.AllowedHosts = strings.Split(v, ",")
 	}
+	if v := os.Getenv("TETHER_DATA_DIR"); v != "" {
+		cfg.DataDir = v
+	}
+	if v := os.Getenv("TETHER_SESSIONS_DIR"); v != "" {
+		cfg.SessionsDir = v
+	}
+	if v := os.Getenv("TETHER_WORKDIR"); v != "" {
+		cfg.Workdir = v
+	}
 
 	// API keys in config files may reference env vars ("${DEEPSEEK_API_KEY}")
 	// so keys never live in a committed file. An env reference that expands

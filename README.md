@@ -45,8 +45,12 @@ make build          # builds the web UI and embeds it into bin/tether
 ./bin/tether
 ```
 
+**Docker**: images for amd64/arm64 are on
+[ghcr.io/konmam/tether](https://ghcr.io/konmam/tether); see
+[docs/docker.md](docs/docker.md) for the compose setup.
+
 Running it on a home server? See [docs/linux.md](docs/linux.md) for the
-systemd unit and remote-access setup.
+systemd unit and remote-access setup, or run the container.
 
 ## Configuration
 

@@ -1,0 +1,13 @@
+.git
+bin
+tether
+web/node_modules
+web/dist
+*.log
+tether.toml
+DECISIONS.md
+PLAN-*.md
+RESEARCH*.md
+AGENTS.md
+Makefile.local
+.tether

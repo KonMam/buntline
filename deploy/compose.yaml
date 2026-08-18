@@ -1,0 +1,24 @@
+# Example Compose stack for running tether on a home server behind a
+# reverse proxy. See docs/docker.md.
+services:
+  tether:
+    image: ghcr.io/konmam/tether:latest
+    container_name: tether
+    environment:
+      # Hostname the UI is served under, for the DNS-rebinding guard.
+      TETHER_ALLOWED_HOSTS: tether.example.com
+      # Default provider. Alternatively, configure providers in the UI
+      # or in ./data/.config/tether/config.toml.
+      TETHER_BASE_URL: https://api.deepseek.com/v1
+      TETHER_MODEL: deepseek-chat
+      TETHER_API_KEY: ${DEEPSEEK_API_KEY}
+    volumes:
+      - ./data:/data # config, secrets, sessions
+      - ./workspace:/workspace # what the agent works on
+    restart: unless-stopped
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
