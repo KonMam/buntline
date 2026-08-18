@@ -577,6 +577,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    /* A long model name plus the stop button can outgrow a narrow box;
+       the send button wraps to its own line rather than clipping. */
+    flex-wrap: wrap;
+    row-gap: 6px;
   }
   .selectors {
     display: flex;
@@ -598,5 +602,15 @@
   .stop:hover {
     border-color: var(--danger);
     color: var(--danger);
+  }
+  /* Mobile: 16px input text (below that iOS zooms the page on focus,
+     and the highlighter inherits the same metrics), tighter margins. */
+  @media (max-width: 719px) {
+    footer {
+      padding: 10px 12px 12px;
+    }
+    .input-wrap {
+      font-size: 16px;
+    }
   }
 </style>

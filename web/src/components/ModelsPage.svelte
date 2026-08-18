@@ -576,6 +576,12 @@
     padding: 28px 32px;
     background: var(--bg);
   }
+  /* Drawer tier: tighter sides, headroom for the floating menu button. */
+  @media (max-width: 719px) {
+    .page {
+      padding: 52px 16px 24px;
+    }
+  }
   .page-head {
     max-width: 720px;
     margin-bottom: 18px;

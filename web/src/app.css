@@ -64,10 +64,26 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Without this, mobile browsers inflate small text at paint time
+     without growing its layout boxes, and compact rows overlap. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
+}
+
+/* Track the dynamic mobile viewport, so the composer stays above the
+   browser chrome as the URL bar shows and hides. */
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+  }
 }
 
 body {

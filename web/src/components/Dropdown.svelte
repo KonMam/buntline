@@ -132,6 +132,7 @@
   .dropdown {
     position: relative;
     min-width: 0;
+    max-width: 220px;
   }
   .trigger {
     display: inline-flex;
@@ -140,9 +141,15 @@
     font-family: var(--mono);
     font-size: 11.5px;
     color: var(--text-muted);
-    max-width: 220px;
+    /* Cap at the wrapper, not a fixed width: when the row squeezes the
+       wrapper below 220px the trigger must shrink with it, not paint
+       over its neighbors. */
+    max-width: 100%;
     padding: 2px 4px;
     border-radius: 5px;
+  }
+  .trigger :global(svg) {
+    flex-shrink: 0;
   }
   .trigger:hover:not(:disabled),
   .trigger[aria-expanded='true'] {

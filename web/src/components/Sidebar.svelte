@@ -227,6 +227,13 @@
   .del.armed {
     opacity: 1;
   }
+  /* Touch: there is no hover to reveal the control, so it stays faintly
+     visible. */
+  @media (hover: none) {
+    .del {
+      opacity: 0.45;
+    }
+  }
   .del.armed {
     color: var(--danger);
     width: auto;

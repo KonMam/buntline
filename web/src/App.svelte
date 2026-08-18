@@ -4,6 +4,7 @@
   import { SessionState } from './lib/session.svelte';
   import type { ModuleStatus, SessionMeta } from './lib/types';
   import Sidebar, { type View } from './components/Sidebar.svelte';
+  import Icon from './components/Icon.svelte';
   import Chat from './components/Chat.svelte';
   import RightPanel from './components/RightPanel.svelte';
   import ModulesPage from './components/ModulesPage.svelte';
@@ -19,6 +20,42 @@
   let showSidebar = $state(true);
   let showPicker = $state(false);
   let showSwitcher = $state(false);
+
+  // Layout tiers, tracked live. Desktop docks the side panes in the
+  // grid; below 1080px the right panel presents as an overlay, below
+  // 720px the sidebar becomes a drawer too. The same showSidebar /
+  // showPanel toggles drive both presentations, so the header buttons
+  // work at every width.
+  let isDesktop = $state(true);
+  let isMobile = $state(false);
+  $effect(() => {
+    const mqDesktop = window.matchMedia('(min-width: 1080px)');
+    const mqMobile = window.matchMedia('(max-width: 719px)');
+    const update = () => {
+      isDesktop = mqDesktop.matches;
+      isMobile = mqMobile.matches;
+    };
+    update();
+    mqDesktop.addEventListener('change', update);
+    mqMobile.addEventListener('change', update);
+    return () => {
+      mqDesktop.removeEventListener('change', update);
+      mqMobile.removeEventListener('change', update);
+    };
+  });
+  const sidebarOverlay = $derived(isMobile);
+  const panelOverlay = $derived(!isDesktop);
+  const sidebarDocked = $derived(!sidebarOverlay && (showSidebar || view !== 'chat'));
+  const panelDocked = $derived(!panelOverlay && showPanel && view === 'chat');
+
+  // Crossing a tier resets the affected pane to that tier's default:
+  // overlays start closed, docked panes start open.
+  $effect(() => {
+    showSidebar = !sidebarOverlay;
+  });
+  $effect(() => {
+    showPanel = !panelOverlay;
+  });
 
   // Pane widths, draggable at the dividers and remembered per browser.
   const paneBounds = {
@@ -58,8 +95,14 @@
   }
 
   // Keyboard layer: Cmd/Ctrl+K opens the session switcher, Cmd/Ctrl+J
-  // toggles the side panel, Cmd/Ctrl+B toggles the sidebar.
+  // toggles the side panel, Cmd/Ctrl+B toggles the sidebar. Escape
+  // closes an open overlay pane.
   function onGlobalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (sidebarOverlay && showSidebar) showSidebar = false;
+      else if (panelOverlay && showPanel) showPanel = false;
+      return;
+    }
     if (!(e.metaKey || e.ctrlKey)) return;
     if (e.key === 'k') {
       e.preventDefault();
@@ -92,6 +135,9 @@
 
   async function select(id: string) {
     view = 'chat';
+    // Picking a session from the drawer closes it: on a small screen
+    // the chat is the destination.
+    if (sidebarOverlay) showSidebar = false;
     if (session.meta?.id !== id) await session.load(id);
   }
 
@@ -172,22 +218,40 @@
   });
 </script>
 
+{#snippet sidebarPane()}
+  <Sidebar
+    {sessions}
+    activeId={session.meta?.id ?? null}
+    {view}
+    onselect={select}
+    onnew={() => (showPicker = true)}
+    ondelete={remove}
+    onnavigate={(v) => {
+      view = v;
+      if (sidebarOverlay) showSidebar = false;
+    }}
+  />
+{/snippet}
+{#snippet panelPane()}
+  <RightPanel
+    {session}
+    {filesEnabled}
+    {checkpointsEnabled}
+    {ollamaEnabled}
+    {subagentsEnabled}
+    {tasksEnabled}
+    {memoryEnabled}
+  />
+{/snippet}
+
 <div
   class="layout"
-  class:with-panel={showPanel && view === 'chat'}
-  class:no-sidebar={!showSidebar && view === 'chat'}
+  class:with-sidebar={sidebarDocked}
+  class:with-panel={panelDocked}
   style="--sidebar-w: {sidebarWidth}px; --panel-w: {panelWidth}px"
 >
-  {#if showSidebar || view !== 'chat'}
-    <Sidebar
-      {sessions}
-      activeId={session.meta?.id ?? null}
-      {view}
-      onselect={select}
-      onnew={() => (showPicker = true)}
-      ondelete={remove}
-      onnavigate={(v) => (view = v)}
-    />
+  {#if sidebarDocked}
+    {@render sidebarPane()}
     <div
       class="resizer"
       role="separator"
@@ -209,7 +273,7 @@
       bind:showPanel
       bind:showSidebar
     />
-    {#if showPanel}
+    {#if panelDocked}
       <div
         class="resizer"
         role="separator"
@@ -217,15 +281,7 @@
         aria-label="Resize the side panel"
         onpointerdown={(e) => startResize('panel', e)}
       ></div>
-      <RightPanel
-        {session}
-        {filesEnabled}
-        {checkpointsEnabled}
-        {ollamaEnabled}
-        {subagentsEnabled}
-        {tasksEnabled}
-        {memoryEnabled}
-      />
+      {@render panelPane()}
     {/if}
   {:else if view === 'modules'}
     <ModulesPage onchange={(m) => (modules = m)} />
@@ -233,6 +289,29 @@
     <ModelsPage {session} {ollamaEnabled} />
   {/if}
 </div>
+
+{#if sidebarOverlay && showSidebar}
+  <button class="scrim" aria-label="Close the session list" onclick={() => (showSidebar = false)}
+  ></button>
+  <div class="drawer left">{@render sidebarPane()}</div>
+{/if}
+{#if panelOverlay && showPanel && view === 'chat'}
+  <button class="scrim" aria-label="Close the side panel" onclick={() => (showPanel = false)}
+  ></button>
+  <div class="drawer right">{@render panelPane()}</div>
+{/if}
+{#if sidebarOverlay && !showSidebar && view !== 'chat'}
+  <!-- Modules/Models have no header toggle of their own; on the drawer
+       tier this floating button is the way back to the menu. -->
+  <button
+    class="drawer-fab icon-btn"
+    onclick={() => (showSidebar = true)}
+    title="Show the menu"
+    aria-label="Show the menu"
+  >
+    <Icon name="panel-left" />
+  </button>
+{/if}
 
 {#if showPicker}
   <FolderPicker
@@ -253,18 +332,20 @@
 <svelte:window onkeydown={onGlobalKeydown} />
 
 <style>
+  /* The grid holds only docked panes; overlay panes live outside it, so
+     no width-based hiding is needed here. */
   .layout {
     display: grid;
-    grid-template-columns: var(--sidebar-w) 3px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     height: 100%;
   }
-  .layout.with-panel {
+  .layout.with-sidebar {
+    grid-template-columns: var(--sidebar-w) 3px minmax(0, 1fr);
+  }
+  .layout.with-sidebar.with-panel {
     grid-template-columns: var(--sidebar-w) 3px minmax(360px, 1fr) 3px var(--panel-w);
   }
-  .layout.no-sidebar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .layout.no-sidebar.with-panel {
+  .layout.with-panel:not(.with-sidebar) {
     grid-template-columns: minmax(360px, 1fr) 3px var(--panel-w);
   }
   .resizer {
@@ -283,27 +364,62 @@
     background: var(--border-strong);
   }
 
-  /* Narrow: drop the right panel first, then the sidebar. */
-  @media (max-width: 1080px) {
-    .layout.with-panel {
-      grid-template-columns: var(--sidebar-w) 3px minmax(0, 1fr);
-    }
-    .layout.no-sidebar.with-panel {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .layout.with-panel :global(> aside:last-child),
-    .layout.with-panel :global(> .resizer:nth-last-child(2)) {
-      display: none;
+  /* Overlay tiers: the same panes floating over the content. Scrim and
+     drawer sit below the modal overlays (z-index 10+), above the git
+     popover (5). */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 8;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 9;
+    display: flex;
+    background: var(--bg);
+  }
+  .drawer > :global(aside) {
+    flex: 1;
+    min-width: 0;
+  }
+  .drawer.left {
+    left: 0;
+    width: min(290px, 85vw);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.25);
+    animation: drawer-in-left 0.16s ease-out;
+  }
+  .drawer.right {
+    right: 0;
+    width: min(380px, 92vw);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+    animation: drawer-in-right 0.16s ease-out;
+  }
+  @keyframes drawer-in-left {
+    from {
+      transform: translateX(-24px);
+      opacity: 0.6;
     }
   }
-  @media (max-width: 720px) {
-    .layout,
-    .layout.with-panel {
-      grid-template-columns: minmax(0, 1fr);
+  @keyframes drawer-in-right {
+    from {
+      transform: translateX(24px);
+      opacity: 0.6;
     }
-    .layout :global(> aside:first-child),
-    .layout :global(> .resizer:first-of-type) {
-      display: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drawer {
+      animation: none;
     }
+  }
+  .drawer-fab {
+    position: fixed;
+    top: 10px;
+    left: 12px;
+    z-index: 7;
+    background: var(--bg);
+    border: 1px solid var(--border);
   }
 </style>
