@@ -59,11 +59,19 @@
 
   // The default endpoint's models, via the generic listing. Works for
   // any local server, and degrades to an empty list (profiles still
-  // work) when the endpoint is unreachable.
+  // work) when the endpoint is unreachable. Waits for the profile list
+  // and skips the probe entirely when the default's key is missing: a
+  // hosted endpoint without a key can only answer 401.
   $effect(() => {
+    if (profiles.length === 0) return;
+    const def = profiles.find((p) => p.name === 'default');
+    if (def?.key_missing) {
+      defaultModels = [];
+      return;
+    }
     api
       .providerModels('default')
-      .then((ms) => (defaultModels = ms))
+      .then((ms) => (defaultModels = ms ?? []))
       .catch(() => {
         defaultModels = [];
       });

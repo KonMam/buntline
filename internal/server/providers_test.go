@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -575,5 +576,29 @@ func TestDeleteAppProviderTombstones(t *testing.T) {
 	apps = config.LoadProviders()
 	if len(apps) != 1 || apps[0].Removed {
 		t.Fatalf("re-add should clear tombstone, got %+v", apps)
+	}
+}
+
+// TestFreshInstallListsAreArrays proves list-shaped responses are JSON
+// arrays (never null) on a machine with no state files. Go marshals nil
+// slices as null, and a null where the UI expects an array crashes it;
+// dev machines always had the files, so only a from-zero install hits
+// this.
+func TestFreshInstallListsAreArrays(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	ts := providerServer(t)
+	for _, ep := range []string{"/api/providers/app", "/api/secrets"} {
+		resp, err := ts.Client().Get(ts.URL + ep)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("%s = %d", ep, resp.StatusCode)
+		}
+		if strings.Contains(string(body), "null") {
+			t.Errorf("%s serves null where the UI expects an array: %s", ep, body)
+		}
 	}
 }

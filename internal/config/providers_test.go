@@ -179,3 +179,26 @@ func TestSaveLoadProviders(t *testing.T) {
 		t.Fatalf("model not round-tripped: %+v", out[1])
 	}
 }
+
+// TestDefaultProfileKeyMissing: a hosted default endpoint with no key is
+// flagged so the UI shows "key missing" instead of probing into a 401;
+// local endpoints need no key and are never flagged.
+func TestDefaultProfileKeyMissing(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	cases := []struct {
+		baseURL, key string
+		want         bool
+	}{
+		{"https://api.deepseek.com/v1", "", true},
+		{"https://api.deepseek.com/v1", "sk-x", false},
+		{"http://localhost:11434/v1", "", false},
+		{"http://192.168.0.50:11434/v1", "", false},
+	}
+	for _, c := range cases {
+		cfg := Config{BaseURL: c.baseURL, APIKey: c.key}
+		def := cfg.ResolvedProfiles()[0]
+		if def.KeyMissing != c.want {
+			t.Errorf("%s key=%q: KeyMissing = %v, want %v", c.baseURL, c.key, def.KeyMissing, c.want)
+		}
+	}
+}

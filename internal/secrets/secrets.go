@@ -90,9 +90,10 @@ func Set(name, value string) error {
 func List() []string {
 	mu.Lock()
 	defer mu.Unlock()
-	var names []string
+	// Never nil: the list is served as JSON and the UI expects an array.
+	names := []string{}
 	if useKeychain() {
-		names = indexRead()
+		names = append(names, indexRead()...)
 	} else {
 		m, _ := readFile()
 		for k := range m {

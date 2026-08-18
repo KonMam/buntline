@@ -1684,6 +1684,9 @@ func (s *Server) handleProviderModels(w http.ResponseWriter, r *http.Request) {
 		httpError(w, http.StatusBadGateway, err)
 		return
 	}
+	if names == nil {
+		names = []string{}
+	}
 	writeJSON(w, names)
 }
 

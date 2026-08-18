@@ -284,15 +284,15 @@ type AppProvider struct {
 }
 
 // LoadProviders reads app-managed providers. A missing file is an empty
-// list, not an error.
+// list, not an error. Never nil: the list is served as JSON, and a null
+// where the UI expects an array crashes it.
 func LoadProviders() []AppProvider {
-	data, err := os.ReadFile(ProvidersPath())
-	if err != nil {
-		return nil
-	}
 	var ps []AppProvider
-	if err := json.Unmarshal(data, &ps); err != nil {
-		return nil
+	if data, err := os.ReadFile(ProvidersPath()); err == nil {
+		_ = json.Unmarshal(data, &ps)
+	}
+	if ps == nil {
+		ps = []AppProvider{}
 	}
 	sort.Slice(ps, func(i, j int) bool {
 		if ps[i].Name != ps[j].Name {
