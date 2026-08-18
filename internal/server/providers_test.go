@@ -602,3 +602,36 @@ func TestFreshInstallListsAreArrays(t *testing.T) {
 		}
 	}
 }
+
+// TestProfilesFlagKeylessHostedDefault: the live key_missing recompute
+// must not clear the flag on a profile that has no key reference at all
+// (the env-configured default): a hosted endpoint with no key from any
+// source has a missing key.
+func TestProfilesFlagKeylessHostedDefault(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	store, err := session.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{BaseURL: "https://api.deepseek.com/v1", AllowedHosts: []string{"example.com"}}
+	s := New(cfg, store, nil, nil, nil)
+	t.Cleanup(s.Shutdown)
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+
+	resp, err := ts.Client().Get(ts.URL + "/api/profiles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var profiles []config.Profile
+	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles) == 0 || profiles[0].Name != "default" {
+		t.Fatalf("profiles = %+v, want default first", profiles)
+	}
+	if !profiles[0].KeyMissing {
+		t.Errorf("keyless hosted default not flagged: %+v", profiles[0])
+	}
+}

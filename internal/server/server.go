@@ -1593,11 +1593,18 @@ func (s *Server) handleWorkdirs(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) handleProfiles(w http.ResponseWriter, _ *http.Request) {
 	// APIKey is json:"-", never leaves. key_missing is computed live so a
-	// key just entered in the UI clears the flag without a restart.
+	// key just entered in the UI clears the flag without a restart. A
+	// profile with no key reference at all (the env-configured default)
+	// is missing its key whenever the endpoint is hosted: local servers
+	// need no key.
 	profiles := s.cfg.ResolvedProfiles()
 	for i := range profiles {
 		p := &profiles[i]
-		p.KeyMissing = p.APIKey == "" && p.KeyRef != "" && secrets.Get(p.KeyRef) == ""
+		if p.APIKey != "" || config.LocalBaseURL(p.BaseURL) {
+			p.KeyMissing = false
+			continue
+		}
+		p.KeyMissing = p.KeyRef == "" || secrets.Get(p.KeyRef) == ""
 	}
 	writeJSON(w, profiles)
 }

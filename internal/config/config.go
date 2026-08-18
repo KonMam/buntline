@@ -128,7 +128,7 @@ func (c Config) ResolvedProfiles() []Profile {
 	def := Profile{Name: "default", BaseURL: c.BaseURL, Model: c.Model, APIKey: c.APIKey}
 	// A hosted endpoint with no key cannot serve anything; flag it so the
 	// UI says "key missing" instead of probing and surfacing 401s.
-	def.KeyMissing = c.APIKey == "" && !localBaseURL(c.BaseURL)
+	def.KeyMissing = c.APIKey == "" && !LocalBaseURL(c.BaseURL)
 	apps := LoadProviders()
 	removed := map[string]bool{}
 	appNames := map[string]bool{}
@@ -228,9 +228,9 @@ func Load() (Config, error) {
 
 var keyRefRe = regexp.MustCompile(`\$\{([A-Za-z0-9_]+)\}`)
 
-// localBaseURL reports whether a base URL points at this machine; local
+// LocalBaseURL reports whether a base URL points at this machine; local
 // endpoints (Ollama, llama.cpp) need no API key.
-func localBaseURL(baseURL string) bool {
+func LocalBaseURL(baseURL string) bool {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return false
