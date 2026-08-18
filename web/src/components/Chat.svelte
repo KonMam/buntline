@@ -329,6 +329,10 @@
   section {
     flex: 1;
     overflow-y: auto;
+    /* Never pan the chat sideways: overflow-y alone computes overflow-x
+       to auto, so one unbroken token would scroll the whole thread. Wide
+       content scrolls inside its own block (pre, table) instead. */
+    overflow-x: hidden;
     min-height: 0;
   }
   .thread {

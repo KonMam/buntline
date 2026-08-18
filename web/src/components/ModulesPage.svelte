@@ -499,6 +499,9 @@
     display: flex;
     gap: 8px;
     align-items: center;
+    /* Inputs keep intrinsic minimums, so the row wraps on narrow
+       screens instead of scrolling the page sideways. */
+    flex-wrap: wrap;
   }
   .add input {
     border: 1px solid var(--border);
@@ -507,13 +510,17 @@
     padding: 6px 10px;
     font-size: 12.5px;
     color: var(--text);
+    min-width: 0;
+  }
+  .add input:not(.target) {
+    flex: 0 1 140px;
   }
   .add input:focus {
     outline: none;
     border-color: var(--border-strong);
   }
   .add .target {
-    flex: 1;
+    flex: 1 1 220px;
     font-family: var(--mono);
   }
   .small {

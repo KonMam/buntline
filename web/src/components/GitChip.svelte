@@ -153,6 +153,18 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     min-width: 360px;
   }
+  /* Drawer tier: the chip sits mid-header, so a 360px popover anchored
+     to it runs off a phone screen. Span the viewport under the header
+     instead. */
+  @media (max-width: 719px) {
+    .pop {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      top: 54px;
+      min-width: 0;
+    }
+  }
   .files {
     max-height: 180px;
     overflow-y: auto;
