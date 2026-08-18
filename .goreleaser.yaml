@@ -1,0 +1,37 @@
+# Release builds: web UI embedded, cross-compiled, published to GitHub
+# Releases on tag push (see .github/workflows/release.yml).
+version: 2
+
+project_name: tether
+
+before:
+  hooks:
+    # The embedded build needs web/dist; goreleaser builds all platforms
+    # from this one frontend build.
+    - sh -c "cd web && npm ci && npm run build"
+
+builds:
+  - main: ./cmd/tether
+    binary: tether
+    flags:
+      - -tags=embedded
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - deploy/tether.service
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github

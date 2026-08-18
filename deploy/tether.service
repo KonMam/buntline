@@ -1,0 +1,33 @@
+# systemd unit for running tether on a home server. Install:
+#
+#   sudo useradd -m -s /bin/bash tether        # dedicated user
+#   sudo cp tether /usr/local/bin/
+#   sudo cp tether.service /etc/systemd/system/
+#   sudo systemctl enable --now tether
+#
+# Configuration lives in /home/tether/.config/tether/config.toml.
+# See docs/linux.md for the full setup, including remote access.
+
+[Unit]
+Description=tether agent harness
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=tether
+WorkingDirectory=/home/tether
+# Bind to loopback and reach it over your VPN, or bind to the VPN
+# interface's address directly (e.g. -addr 100.x.y.z:7433 for Tailscale).
+# Do NOT bind 0.0.0.0 on a network you don't fully trust: the agent
+# executes shell commands and the UI has no authentication of its own.
+ExecStart=/usr/local/bin/tether -no-open -addr 127.0.0.1:7433
+Restart=on-failure
+RestartSec=3
+
+# The agent runs shell commands by design, so heavy sandboxing
+# (ProtectSystem=strict etc.) would break it; these two are free.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

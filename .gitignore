@@ -1,0 +1,15 @@
+bin/
+/tether
+web/dist/
+web/node_modules/
+*.log
+.DS_Store
+tether.toml
+
+# Local working files, kept on disk but out of the repo.
+DECISIONS.md
+PLAN-*.md
+RESEARCH*.md
+AGENTS.md
+Makefile.local
+.tether/

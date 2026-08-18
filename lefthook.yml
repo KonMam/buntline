@@ -1,0 +1,23 @@
+# Pre-commit hooks: fast checks only. The heavy lifting (full lint,
+# race-enabled tests, embedded build) runs in CI. Install: lefthook install
+pre-commit:
+  parallel: true
+  commands:
+    gofmt:
+      glob: "*.go"
+      run: |
+        out=$(gofmt -l {staged_files})
+        if [ -n "$out" ]; then
+          echo "gofmt needed:"; echo "$out"; exit 1
+        fi
+    govet:
+      glob: "*.go"
+      run: go vet ./...
+    gotest:
+      glob: "*.go"
+      run: go test ./...
+    prettier:
+      # root makes lefthook run inside web/ with staged paths relative to it
+      root: "web/"
+      glob: "*.{ts,svelte,css,json}"
+      run: npx prettier --check {staged_files}
