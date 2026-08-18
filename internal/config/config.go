@@ -17,6 +17,10 @@ import (
 )
 
 type Config struct {
+	// Version is the running binary's release version ("dev" for source
+	// builds), stamped by main and surfaced to the UI via /api/config.
+	// Not a config-file field.
+	Version string `toml:"-"`
 	BaseURL string `toml:"base_url"`
 	Model   string `toml:"model"`
 	APIKey  string `toml:"api_key"`

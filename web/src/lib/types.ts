@@ -114,6 +114,7 @@ export interface ServerConfig {
   model: string;
   base_url: string;
   workdir: string;
+  version: string;
 }
 
 export interface PendingApproval {

@@ -693,6 +693,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 		"model":    s.cfg.Model,
 		"base_url": s.cfg.BaseURL,
 		"workdir":  s.cfg.Workdir,
+		"version":  s.cfg.Version,
 	})
 }
 

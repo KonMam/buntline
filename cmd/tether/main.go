@@ -80,6 +80,7 @@ func run() error {
 	}
 	cfg.BaseURL, cfg.Model, cfg.Addr = *baseURL, *model, *addr
 	cfg.DataDir, cfg.SessionsDir = *dataDir, *sessionsDir
+	cfg.Version = version
 
 	if *workdir != "" {
 		cfg.Workdir = *workdir

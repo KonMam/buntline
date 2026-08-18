@@ -1,9 +1,24 @@
 <script lang="ts">
   import type { SessionMeta } from '../lib/types';
   import { ThemeState } from '../lib/theme.svelte';
+  import { api } from '../lib/api';
   import Icon from './Icon.svelte';
 
   const theme = new ThemeState();
+
+  // The running server's release version, next to the brand. Release
+  // builds stamp the tag version (without the leading v); source builds
+  // report "dev". Shown in tag form: v0.2.0.
+  let version = $state('');
+  $effect(() => {
+    api
+      .config()
+      .then((c) => {
+        const v = c.version || '';
+        version = v && v !== 'dev' ? 'v' + v.replace(/^v/, '') : v;
+      })
+      .catch(() => {});
+  });
   const themeIcon = $derived(
     theme.current === 'system' ? 'contrast' : theme.current === 'light' ? 'sun' : 'moon',
   );
@@ -55,7 +70,9 @@
 
 <aside>
   <header>
-    <span class="brand">tether</span>
+    <span class="brand"
+      >tether{#if version}<span class="ver" title="tether {version}">{version}</span>{/if}</span
+    >
     <button class="icon-btn" onclick={onnew} title="New session" aria-label="New session">
       <Icon name="plus" />
     </button>
@@ -149,6 +166,13 @@
     font-weight: 650;
     letter-spacing: 0.01em;
     color: var(--text-strong);
+  }
+  .ver {
+    margin-left: 6px;
+    font-size: 10.5px;
+    font-weight: 400;
+    font-family: var(--mono);
+    color: var(--text-muted);
   }
   nav {
     flex: 1;
