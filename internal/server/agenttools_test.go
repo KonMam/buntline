@@ -111,13 +111,16 @@ func TestBackgroundSpawnAndNotice(t *testing.T) {
 	s, store := newTestServer(t)
 	ls, id := startSession(t, s, store)
 
+	// The child reads the provider live from the session agent, exactly
+	// as a profile switch would leave it.
+	if err := ls.agent.SetProvider(immediateProvider{}); err != nil {
+		t.Fatal(err)
+	}
 	st := &spawnTool{
 		server:    s,
 		sessionID: id,
 		ls:        ls,
 		workdir:   t.TempDir(),
-		prov:      immediateProvider{},
-		model:     "test-model",
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -69,13 +69,16 @@ func loadAgentDefs(workdir string) []agentDef {
 // its own transcript (the parent's context stays lean, the whole point)
 // and emits events tagged with the spawning call's ID so the trace nests
 // them. Approvals flow through the same gate as the parent's.
+//
+// The child's provider and model are read from the parent agent at spawn
+// time, not captured here: a profile or model switch mid-session
+// (handleSetModel) retargets the parent, and a copy taken at attach would
+// keep sending subagent calls to the old backend with the old key.
 type spawnTool struct {
 	server    *Server
 	sessionID string
 	ls        *liveSession
 	workdir   string
-	prov      provider.Provider
-	model     string
 	defs      []agentDef
 }
 
@@ -169,10 +172,17 @@ func (t *spawnTool) Run(ctx context.Context, args json.RawMessage) (tools.Result
 		)
 	}
 
+	// Live values: a profile/model switch since attach must apply to
+	// children too, or they keep authenticating against the old backend.
+	if t.ls == nil || t.ls.agent == nil {
+		return tools.Result{}, fmt.Errorf("session agent not ready")
+	}
+	prov, model := t.ls.agent.Provider(), t.ls.agent.Model()
+
 	parentID := agent.ToolCallID(ctx)
 	child := agent.New(agent.Config{
-		Provider:     t.prov,
-		Model:        t.model,
+		Provider:     prov,
+		Model:        model,
 		Tools:        registry,
 		Approver:     &httpApprover{server: t.server, sessionID: t.sessionID},
 		SystemPrompt: prompt,

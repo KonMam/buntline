@@ -278,13 +278,14 @@ func TestSubagentSpawnInterruptReport(t *testing.T) {
 
 	// A spawnTool with a provider that never produces events: the child
 	// stays inside its first Stream until the context is cancelled.
+	if err := ls.agent.SetProvider(blockingProvider{}); err != nil {
+		t.Fatal(err)
+	}
 	st := &spawnTool{
 		server:    s,
 		sessionID: id,
 		ls:        ls,
 		workdir:   t.TempDir(),
-		prov:      blockingProvider{},
-		model:     "test-model",
 	}
 	ctx, cancelParent := context.WithCancel(context.Background())
 	defer cancelParent()

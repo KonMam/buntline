@@ -178,6 +178,23 @@ func (a *Agent) SetProvider(p provider.Provider) error {
 	return nil
 }
 
+// Provider returns the current backend. Anything that spawns work on the
+// session's behalf (subagents) must read this live rather than capture a
+// provider at construction: SetProvider retargets the session, and a held
+// copy silently keeps calling the old backend with the old key.
+func (a *Agent) Provider() provider.Provider {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.cfg.Provider
+}
+
+// Model returns the current model. Same live-read rule as Provider.
+func (a *Agent) Model() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.cfg.Model
+}
+
 // SetSystemPrompt replaces the system message. Rejected mid-turn; the
 // next model call re-evaluates the whole prefix (cache cost is real and
 // will show in the context meter).

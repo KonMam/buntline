@@ -460,8 +460,8 @@ func (s *Server) attach(id string) (*liveSession, error) {
 		if s.modules.EnabledFor("subagents", ws.Modules) {
 			registry.Add(&spawnTool{
 				server: s, sessionID: id, ls: ls,
-				workdir: workdir, prov: prov, model: meta.Model,
-				defs: loadAgentDefs(workdir),
+				workdir: workdir,
+				defs:    loadAgentDefs(workdir),
 			})
 			registry.Add(&AgentList{ls: ls})
 			registry.Add(&AgentOutput{ls: ls})
