@@ -29,11 +29,26 @@ describe('foldTasks', () => {
     expect(foldTasks(events)).toEqual([]);
   });
 
-  it('ignores non-tasks events and malformed payloads', () => {
+  it('clears on a tasks event with no tasks field', () => {
+    // The Go bridge writes an empty list as a tasks event without the
+    // field (omitempty drops it), so a bare tasks event means cleared.
+    const events = [
+      tasksEvent(0, [task('a', 'completed'), task('b', 'completed')]),
+      { type: 'tasks', time: at(1) } as AgentEvent,
+    ];
+    expect(foldTasks(events)).toEqual([]);
+  });
+
+  it('clears on a tasks event with a non-array payload', () => {
     const events = [
       tasksEvent(0, [task('a', 'pending')]),
       { type: 'tasks', time: at(1), tasks: 'nope' } as unknown as AgentEvent,
     ];
+    expect(foldTasks(events)).toEqual([]);
+  });
+
+  it('ignores non-tasks events', () => {
+    const events = [tasksEvent(0, [task('a', 'pending')]), { type: 'turn_end', time: at(1) } as AgentEvent];
     expect(foldTasks(events)).toEqual([task('a', 'pending')]);
   });
 });

@@ -5,15 +5,18 @@
 // panel.
 import type { AgentEvent, TaskItem } from './types';
 
-// foldTasks reduces the activity stream to the current task list. An
-// empty or missing list clears (a whole-list replace). Events before
-// the stream's window fold the same way the server's fold would: later
-// writes win, so a truncated window still shows the latest list.
+// foldTasks reduces the activity stream to the current task list. Every
+// tasks event replaces the list. An empty list clears, and the Go
+// bridge writes that as an event with no `tasks` field at all
+// (omitempty drops the key), so a missing or non-array payload means
+// "cleared", not "unchanged". Events before the stream's window fold
+// the same way the server's fold would: later writes win, so a
+// truncated window still shows the latest list.
 export function foldTasks(events: AgentEvent[]): TaskItem[] {
   let tasks: TaskItem[] = [];
   for (const ev of events) {
-    if (ev.type === 'tasks' && Array.isArray(ev.tasks)) {
-      tasks = ev.tasks;
+    if (ev.type === 'tasks') {
+      tasks = Array.isArray(ev.tasks) ? ev.tasks : [];
     }
   }
   return tasks;

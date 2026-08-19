@@ -6,6 +6,13 @@
 // three-state status, no ids, no priority), modeled on
 // deepseek-harness's todo_write: the model sends the entire list on
 // every write, so items need no stable identity.
+//
+// A turn that ends with an all-completed (or empty) list is cleared by
+// the server (Server.clearTasksIfDone): the model usually re-sends the
+// old list marked completed, and without the clear the finished work
+// would stick around for the next request. The clear is written as an
+// empty EventTasks through the same bridge as a todo_write, so it
+// persists and replays like any other write.
 package tasks
 
 import (
@@ -274,7 +281,7 @@ func (t *TodoWrite) SetStore(s tools.TaskStore) { t.store = s }
 func (t *TodoWrite) Def() provider.ToolDef {
 	return provider.ToolDef{
 		Name:        "todo_write",
-		Description: "Replace the entire task list with the given todos. Send the full list on every call; the previous list is discarded. Each todo has content and a status: pending, in_progress, or completed. Use it to keep track of the steps ahead and update statuses as work progresses. The list is shown in the UI and persists for the session.",
+		Description: "Replace the entire task list with the given todos. Send the full list on every call; the previous list is discarded. Each todo has content and a status: pending, in_progress, or completed. Use it to keep track of the steps ahead and update statuses as work progresses. The list is shown in the UI and persists for the session; a turn that ends with nothing left to do (all completed) clears it automatically, so each new request starts with a fresh list.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

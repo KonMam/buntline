@@ -55,6 +55,12 @@ type liveSession struct {
 	registry *tools.Registry
 	touched  atomic.Int64 // unix nanos of the last resolve/dispatch
 
+	// overrides is the session's per-repository module overrides at
+	// attach time. It is the same effective state that decided which
+	// tools and observers the session got, so runtime paths that consult
+	// a module (the tasks auto-clear) respect the same toggle.
+	overrides map[string]bool
+
 	// mode is the approval policy (see session.Meta.Mode); guarded by
 	// modeMu because the approver reads it from the agent goroutine.
 	modeMu sync.Mutex
@@ -471,7 +477,7 @@ func (s *Server) attach(id string) (*liveSession, error) {
 	var interceptors []agent.ToolInterceptor
 	var observers []func(agent.Event)
 	h := newHub()
-	ls := &liveSession{hub: h, workdir: workdir, registry: registry, subagents: newSubagentRegistry()}
+	ls := &liveSession{hub: h, workdir: workdir, registry: registry, subagents: newSubagentRegistry(), overrides: ws.Modules}
 	if s.modules != nil {
 		for _, t := range s.modules.Tools(workdir, ws.Modules) {
 			registry.Add(t)
@@ -652,6 +658,12 @@ func (s *Server) dispatch(sessionID string, ls *liveSession, ev agent.Event) {
 		s.mu.Lock()
 		ls.runningTool = ""
 		s.mu.Unlock()
+		// Main-loop turns only: a subagent shares the session's list but
+		// is not the thing that owns it, so its turn ending must not
+		// reset the parent's plan.
+		if ev.ParentID == "" {
+			s.clearTasksIfDone(sessionID, ls)
+		}
 	}
 	// The session list's live state: which tool the main loop is
 	// executing. Subagent calls (ParentID set) don't count: the session
@@ -697,6 +709,48 @@ func (s *Server) dispatch(sessionID string, ls *liveSession, ev agent.Event) {
 				}()
 			}
 		}
+	}
+}
+
+// clearTasksIfDone resets the session's task list when a turn ends with
+// nothing left to do. todo_write is a whole-list replace and the model
+// usually re-sends the old list marked completed, so without this the
+// Tasks strip would keep finished work forever and the next request
+// would inherit it. Only an all-completed (or empty) list is cleared; a
+// list with pending or in-progress items is a live plan and survives
+// the turn, so follow-up requests keep it.
+//
+// The clear goes through the module's per-session bridge so an empty
+// EventTasks is persisted and broadcast exactly like a todo_write: the
+// server fold and the replay path stay in agreement (replay rebuilds
+// only from EventTasks events), the trace keeps the completed snapshots
+// as history, and a page reload shows the reset list. Idempotent: once
+// the list is empty the check returns, so only one clear lands.
+func (s *Server) clearTasksIfDone(sessionID string, ls *liveSession) {
+	if s.modules == nil {
+		return
+	}
+	tm, ok := s.modules.Get("tasks").(*tasks.Module)
+	if !ok || !s.modules.EnabledFor("tasks", ls.overrides) {
+		return
+	}
+	items := tm.Get(sessionID)
+	if len(items) == 0 {
+		return
+	}
+	for _, it := range items {
+		if it.Status == tasks.StatusPending || it.Status == tasks.StatusInProgress {
+			return
+		}
+	}
+	if err := tm.NewBridge(sessionID, func(ev agent.Event) {
+		// Stamped here, not by the loop: this event leaves the harness
+		// through the bridge, like the todo_write events it mirrors.
+		ev.TurnID = ls.agent.TurnID()
+		ev.Time = time.Now()
+		s.dispatch(sessionID, ls, ev)
+	}).Write(nil); err != nil {
+		s.log.Error("clear finished task list", "session", sessionID, "err", err)
 	}
 }
 

@@ -369,6 +369,144 @@ func TestTasksDisableReenableRestores(t *testing.T) {
 	}
 }
 
+// TestTasksClearOnFinishedTurn covers the auto-clear: a main-loop turn
+// ending with an all-completed list writes an empty EventTasks through
+// the bridge (folded, persisted, and replayed), so the next request
+// starts clean; a list with pending or in-progress items is a live plan
+// and survives the turn.
+func TestTasksClearOnFinishedTurn(t *testing.T) {
+	store, err := session.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(emptyConfig(), store, nil, tasksRegistry(t), nil)
+	t.Cleanup(s.Shutdown)
+
+	meta, err := store.Create("test-model", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ls, err := s.resolve(meta.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw, ok := ls.registry.Get("todo_write")
+	if !ok {
+		t.Fatal("todo_write tool missing")
+	}
+	if _, err := tw.Run(context.Background(), json.RawMessage(
+		`{"todos":[{"content":"done thing","status":"completed"},{"content":"also done","status":"completed"}]}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	// The main loop ends the turn through the real dispatch path: the
+	// all-completed list must clear, folding and persisting an empty
+	// EventTasks.
+	s.dispatch(meta.ID, ls, agent.Event{Type: agent.EventTurnEnd, StopReason: "done"})
+	tr, ok := ls.registry.Get("todo_read")
+	if !ok {
+		t.Fatal("todo_read tool missing")
+	}
+	res, err := tr.Run(context.Background(), json.RawMessage("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Content != "No tasks yet" {
+		t.Errorf("list after finished turn = %q, want cleared", res.Content)
+	}
+
+	// The clear was persisted as an empty EventTasks, so a fresh server
+	// replays an empty list rather than the stale completed items.
+	evs, err := store.Events(meta.ID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lastTasks *agent.Event
+	for i := range evs {
+		if evs[i].Type == agent.EventTasks {
+			lastTasks = &evs[i]
+		}
+	}
+	if lastTasks == nil || len(lastTasks.Tasks) != 0 {
+		t.Fatalf("last tasks event = %+v, want an empty list", lastTasks)
+	}
+
+	s2 := New(emptyConfig(), store, nil, tasksRegistry(t), nil)
+	t.Cleanup(s2.Shutdown)
+	ls2, err := s2.resolve(meta.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr2, ok := ls2.registry.Get("todo_read")
+	if !ok {
+		t.Fatal("todo_read missing after restart")
+	}
+	res2, err := tr2.Run(context.Background(), json.RawMessage("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res2.Content != "No tasks yet" {
+		t.Errorf("replayed list = %q, want cleared", res2.Content)
+	}
+
+	// A live plan survives the turn: in-progress items are not cleared.
+	if _, err := tw.Run(context.Background(), json.RawMessage(
+		`{"todos":[{"content":"ongoing work","status":"in_progress"}]}`)); err != nil {
+		t.Fatal(err)
+	}
+	s.dispatch(meta.ID, ls, agent.Event{Type: agent.EventTurnEnd, StopReason: "done"})
+	res3, err := tr.Run(context.Background(), json.RawMessage("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res3.Content != "[in_progress] ongoing work" {
+		t.Errorf("live plan after turn = %q, want kept", res3.Content)
+	}
+}
+
+// TestTasksClearRespectsDisable: with the tasks module disabled, a
+// finished turn leaves the folded list alone (no clear EventTasks is
+// written), exactly as if the module were absent.
+func TestTasksClearRespectsDisable(t *testing.T) {
+	store, err := session.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := tasksRegistry(t)
+	s := New(emptyConfig(), store, nil, reg, nil)
+	t.Cleanup(s.Shutdown)
+
+	meta, err := store.Create("test-model", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ls, err := s.resolve(meta.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw, ok := ls.registry.Get("todo_write")
+	if !ok {
+		t.Fatal("todo_write tool missing")
+	}
+	if _, err := tw.Run(context.Background(), json.RawMessage(
+		`{"todos":[{"content":"stale","status":"completed"}]}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := reg.SetEnabled("tasks", false); err != nil {
+		t.Fatal(err)
+	}
+	s.dispatch(meta.ID, ls, agent.Event{Type: agent.EventTurnEnd, StopReason: "done"})
+
+	tm, ok := reg.Get("tasks").(*tasks.Module)
+	if !ok {
+		t.Fatal("tasks module missing from registry")
+	}
+	if got := tm.Get(meta.ID); len(got) != 1 || got[0].Content != "stale" {
+		t.Errorf("disabled module list after turn = %+v, want untouched", got)
+	}
+}
+
 // TestPlanModeGuidance is Task 4: plan mode is an existing approval
 // policy (read-only), and the module's only prompt change is a short
 // guidance line gated on that mode. Inactive modes add zero tokens; the

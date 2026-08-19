@@ -186,9 +186,10 @@ export class SessionState {
   #handle(ev: AgentEvent) {
     // Fold tasks events before the switch so the strip updates the
     // moment a todo_write lands, whether it was dispatched by the loop
-    // or by the module's bridge.
-    if (ev.type === 'tasks' && Array.isArray(ev.tasks)) {
-      this.tasks = ev.tasks;
+    // or by the module's bridge. A tasks event with no array payload is
+    // a clear (the Go bridge omits the empty list's field entirely).
+    if (ev.type === 'tasks') {
+      this.tasks = Array.isArray(ev.tasks) ? ev.tasks : [];
     }
     switch (ev.type) {
       case 'text_delta':
