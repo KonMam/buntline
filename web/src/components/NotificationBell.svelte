@@ -1,9 +1,7 @@
 <script lang="ts">
   // The bell: unread count badge and the in-app notification list. One
   // instance, owned by the app, fed by the global /api/events stream.
-  // Settings are deliberately NOT here — per-type toggles, the master
-  // switch, and desktop popups live on the Notifications module view
-  // (modules → notifications), so the bell stays a list.
+  // Settings live on the Notifications module view, not here.
   import type { NotificationCenter } from '../lib/notifications.svelte';
   import { kindLabel } from '../lib/notifications.svelte';
   import Icon from './Icon.svelte';
@@ -64,7 +62,7 @@
       <div class="list">
         {#if center.items.length === 0}
           <div class="empty">
-            nothing yet — approvals, questions, and turn ends from every session land here
+            nothing yet. approvals, questions, and turn ends from every session land here
           </div>
         {:else}
           {#each center.items as item (item.id)}
@@ -85,8 +83,6 @@
           {/each}
         {/if}
       </div>
-
-      <footer class="hint">settings live under modules → notifications</footer>
     </div>
   {/if}
 </div>
@@ -214,12 +210,5 @@
     padding: 18px 14px;
     color: var(--text-muted);
     font-size: 12.5px;
-  }
-  footer.hint {
-    padding: 7px 12px;
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.75;
-    border-top: 1px solid var(--border);
   }
 </style>

@@ -2172,8 +2172,8 @@ func (h *httpApprover) autoDecision(req agent.ApprovalRequest) (agent.Decision, 
 // approval_request event only when a human will actually be asked. Calls
 // autoDecision resolves are never announced, so the bell, attention
 // banner, and OS popups don't fire for approvals that never reach a
-// human — the agent's request→result pair would otherwise read as "needs
-// you" for an instant on every auto-approved call.
+// human. Without this, the agent's request/result pair would flash
+// "needs you" on every auto-approved call.
 func (h *httpApprover) AnnounceApproval(req agent.ApprovalRequest) {
 	if h.ls == nil {
 		return

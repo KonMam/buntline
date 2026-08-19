@@ -130,17 +130,13 @@
       </button>
       <header class="pane-head">
         <h1>Notifications</h1>
-        <p>
-          What buntline tells you about while it works: approvals and questions from every session,
-          turn ends, and errors. Each browser remembers its own choices here.
-        </p>
+        <p>Approvals, questions, turn ends, and errors from every session. Per-browser choices.</p>
       </header>
 
       <section class="notif-section">
         <h2>Notifications</h2>
         <p class="hint">
-          Master switch. Off stops the bell, the attention banner, and desktop popups — the module
-          switch on the card above does the same, app-wide.
+          Master switch. Off stops the bell, the attention banner, and desktop popups.
         </p>
         <div class="notif-row">
           <div class="notif-text">
@@ -162,17 +158,14 @@
 
       <section class="notif-section">
         <h2>Desktop popups</h2>
-        <p class="hint">
-          OS-level popups need this site's permission in the browser. Turn them off here any time;
-          the browser keeps the permission, the popups just stop.
-        </p>
+        <p class="hint">OS-level popups need this site's permission in the browser.</p>
         {#if notif.osAvailable}
           <div class="notif-row">
             <div class="notif-text">
               <span class="notif-name">Desktop popups</span>
               <span class="notif-desc">
                 {#if notif.osPermission === 'granted'}
-                  permission granted — popups {notif.settings.os ? 'on' : 'off'}
+                  popups {notif.settings.os ? 'on' : 'off'}
                 {:else if notif.osPermission === 'denied'}
                   blocked in browser settings
                 {:else}
@@ -327,7 +320,7 @@
             <span class="id">
               {m.id}
               {#if m.id === 'notifications'}
-                <span class="manage">settings →</span>
+                <span class="manage">settings</span>
               {/if}
             </span>
           </article>

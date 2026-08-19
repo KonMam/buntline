@@ -27,7 +27,7 @@ func TestAutoApprovalNeverAnnounced(t *testing.T) {
 	}{
 		{mode: "auto", req: agent.ApprovalRequest{ID: "a1", ToolName: "bash", ToolArgs: `{"command":"rm -rf x"}`}, want: agent.DecisionAllow},
 		{mode: "auto_edit", req: agent.ApprovalRequest{ID: "a2", ToolName: "write_file", ToolArgs: `{"path":"x"}`}, want: agent.DecisionAllow},
-		// auto_edit still asks for non-edit tools — that case is covered by
+		// auto_edit still asks for non-edit tools, covered by
 		// TestAskApprovalAnnounced below via the default mode.
 		{mode: "plan", req: agent.ApprovalRequest{ID: "a3", ToolName: "bash", ToolArgs: `{"command":"ls"}`}, want: agent.DecisionDeny},
 	}
