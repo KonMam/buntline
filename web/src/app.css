@@ -134,7 +134,8 @@ button {
   color: var(--danger);
 }
 
-/* Primary action buttons keep words. */
+/* Primary action buttons keep words; the composer's send is a circular
+   arrow icon (Composer.svelte) instead. */
 .btn-primary {
   display: inline-flex;
   align-items: center;

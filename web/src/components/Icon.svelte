@@ -1,7 +1,7 @@
 <script lang="ts">
   // Inline stroke icons, 16px grid, currentColor; no icon font, no
   // dependency. Names are the vocabulary of the app's meta-controls;
-  // primary actions keep words.
+  // the composer's send arrow and attach image live here too.
   let {
     name,
     size = 16,
@@ -34,6 +34,9 @@
     alert: 'M8 2.25L14.25 13H1.75zM8 6.2v3.2M8 11.6v.4',
     star: 'M8 1.75l1.9 3.85 4.25.62-3.08 3 .73 4.23L8 11.63l-3.34 1.82-.73-4.23-3.08-3 4.25-.62z',
     bell: 'M8 1.75a4.5 4.5 0 00-4.5 4.5c0 3-1.2 4.25-1.5 4.75h12c-.3-.5-1.5-1.75-1.5-4.75a4.5 4.5 0 00-4.5-4.5zM6.25 12.5a1.75 1.75 0 003.5 0',
+    image:
+      'M2.5 3.5h11a1 1 0 011 1v7a1 1 0 01-1 1h-11a1 1 0 01-1-1v-7a1 1 0 011-1zM2.75 11.25l3.25-3.75 2.5 2.5 2.25-2.5 2.75 3.75M10.75 6.25a.75.75 0 100-1.5.75.75 0 000 1.5z',
+    send: 'M8 13.5V2.5M3.5 7L8 2.5l4.5 4.5',
   };
 </script>
 

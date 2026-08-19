@@ -68,24 +68,44 @@
     }
   });
 
-  // Images attached by pasting, sent as data URLs alongside the text.
+  // Images attached by pasting or picking, sent as data URLs alongside
+  // the text. Pasting covers desktop; the attach button covers mobile
+  // (where there is no clipboard paste gesture) via a hidden file input.
   let images = $state<string[]>([]);
+  let fileInput = $state<HTMLInputElement | null>(null);
   const imageCap = 8 * 1024 * 1024;
 
-  function onpaste(e: ClipboardEvent) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (!item.type.startsWith('image/')) continue;
-      const file = item.getAsFile();
-      if (!file || file.size > imageCap) continue;
-      e.preventDefault();
+  function addImages(files: Iterable<File>) {
+    for (const file of files) {
+      if (!file.type.startsWith('image/') || file.size > imageCap) continue;
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') images = [...images, reader.result];
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  function onpaste(e: ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (const item of items) {
+      if (!item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (!file || file.size > imageCap) continue;
+      files.push(file);
+    }
+    if (files.length === 0) return;
+    e.preventDefault();
+    addImages(files);
+  }
+
+  function onpick(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    if (input.files) addImages(input.files);
+    // Reset so picking the same file again re-fires onchange.
+    input.value = '';
   }
 
   function removeImage(i: number) {
@@ -435,21 +455,46 @@
               : 'Message · / commands · @ attach a file'}
         ></textarea>
       </div>
-      <div class="row">
+      <div class="bottom">
+        <button
+          class="attach icon-btn"
+          onclick={() => fileInput?.click()}
+          title="Attach an image"
+          aria-label="Attach an image"
+        >
+          <Icon name="image" size={15} />
+        </button>
         <div class="selectors">
           <ModeSelect {session} />
           <ModelSelect {session} />
         </div>
-        {#if session.busy}
-          <button class="stop" onclick={() => session.interrupt()} title="Interrupt (Esc)">
-            <Icon name="stop" size={12} />
-            stop
+        <div class="actions">
+          {#if session.busy}
+            <button class="stop" onclick={() => session.interrupt()} title="Interrupt (Esc)">
+              <Icon name="stop" size={12} />
+              stop
+            </button>
+          {/if}
+          <button
+            class="send"
+            onclick={submit}
+            disabled={!text.trim() && images.length === 0}
+            title="Send message"
+            aria-label="Send message"
+          >
+            <Icon name="send" size={15} />
           </button>
-        {/if}
-        <button class="btn-primary" onclick={submit} disabled={!text.trim() && images.length === 0}
-          >send</button
-        >
+        </div>
       </div>
+      <input
+        class="file-input"
+        type="file"
+        accept="image/*"
+        multiple
+        bind:this={fileInput}
+        onchange={onpick}
+        hidden
+      />
     </div>
   </div>
 </footer>
@@ -513,6 +558,9 @@
     border-radius: 10px;
     background: var(--surface);
     padding: 10px 12px 8px;
+    /* Size queries let the composer adapt to its actual width (a docked
+       side panel squeezes the chat below the mobile breakpoint too). */
+    container-type: inline-size;
   }
   .box:focus-within {
     border-color: var(--border-strong);
@@ -599,14 +647,10 @@
     line-height: 1.5;
     padding: 0 7px;
   }
-  .row {
+  .bottom {
     display: flex;
     align-items: center;
     gap: 10px;
-    /* A long model name plus the stop button can outgrow a narrow box;
-       the send button wraps to its own line rather than clipping. */
-    flex-wrap: wrap;
-    row-gap: 6px;
   }
   .selectors {
     display: flex;
@@ -614,6 +658,36 @@
     gap: 12px;
     flex: 1;
     min-width: 0;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .attach {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+  .send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    flex-shrink: 0;
+  }
+  .send:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent), var(--text-strong) 12%);
+  }
+  .send:disabled {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: default;
   }
   .stop {
     display: inline-flex;
@@ -628,6 +702,28 @@
   .stop:hover {
     border-color: var(--danger);
     color: var(--danger);
+  }
+  /* Narrow composer: the mode/model dropdowns move to their own
+     full-width line so their labels never fight the attach and send
+     buttons for space. */
+  @container (max-width: 620px) {
+    .bottom {
+      flex-wrap: wrap;
+    }
+    .attach {
+      order: 1;
+    }
+    .actions {
+      order: 2;
+      margin-left: auto;
+    }
+    .selectors {
+      order: 3;
+      flex: 1 1 100%;
+    }
+    .selectors :global(.dropdown) {
+      flex: 1;
+    }
   }
   /* Mobile: 16px input text (below that iOS zooms the page on focus,
      and the highlighter inherits the same metrics), tighter margins. */
