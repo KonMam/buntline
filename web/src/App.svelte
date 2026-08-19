@@ -192,6 +192,11 @@
     }
     await refreshSessions();
     if (!session.meta && sessions.length > 0) await select(sessions[0].id);
+    // The parked composer draft dies with its session. Deleted last:
+    // removing the active session nulls the meta above, and the
+    // composer's park effect re-adds the draft on the next microtask
+    // flush, so deleting earlier would leave the entry behind.
+    delete session.drafts[id];
   }
 
   // First-run gate: until a provider exists there is nothing a session

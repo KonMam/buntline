@@ -60,6 +60,14 @@ export class SessionState {
   // the original message over through here).
   draft = $state('');
 
+  // Composer drafts parked per session, keyed by session id. One
+  // SessionState instance serves every session (switching calls load,
+  // it never swaps the object), so the composer's buffer must live here
+  // rather than in component state: text typed in one session is parked
+  // under that session's id on switch and restored on return, never
+  // leaking into another session's composer.
+  drafts = $state<Record<string, string>>({});
+
   // Queued messages sent while the agent is busy: the server accepted
   // them as steering and they enter the transcript when the loop picks
   // them up. Kept here so the user sees what they sent while it waits;

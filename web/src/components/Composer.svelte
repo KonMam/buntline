@@ -25,11 +25,37 @@
   let mcpPrompts = $state<MCPPromptInfo[]>([]);
   let files = $state<string[]>([]);
 
+  // The composer buffer is per-session. The component itself survives
+  // session switches (one SessionState is shared and reloaded), so the
+  // buffer is parked under the session id on the way out and restored
+  // from there on the way back: switching sessions never carries text
+  // into an unrelated session, and returning finds it again.
+  let draftId: string | null = null;
+  $effect(() => {
+    const id = session.meta?.id ?? null;
+    const prev = draftId;
+    // Leaving a session parks the current buffer under its id. Typing
+    // in the same session (prev === id) never touches the map.
+    if (prev !== null && prev !== id) {
+      session.drafts[prev] = text;
+    }
+    draftId = id;
+    if (id !== null && id !== prev) {
+      text = session.drafts[id] ?? '';
+    } else if (id === null) {
+      text = '';
+    }
+  });
+
   // Edit-and-resend hands the original message over via session.draft.
   $effect(() => {
     if (session.draft) {
+      const id = session.meta?.id;
       text = session.draft;
       session.draft = '';
+      // Park it as this session's draft too, so switching away and back
+      // before sending keeps the edited text.
+      if (id) session.drafts[id] = text;
       area?.focus();
     }
   });
