@@ -1,8 +1,6 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -55,55 +53,6 @@ func TestResolvedProfilesNoSyntheticDefault(t *testing.T) {
 	ps := (Config{BaseURL: "http://localhost:11434/v1", Model: "qwen3.5:9b"}).ResolvedProfiles()
 	if len(ps) != 1 || ps[0].Name != "default" {
 		t.Errorf("ResolvedProfiles = %v, want the synthetic default", ps)
-	}
-}
-
-// TestMigrateLegacyDirs: the pre-rebrand tether directories move to their
-// buntline successors exactly once, and an existing buntline directory is
-// never overwritten.
-func TestMigrateLegacyDirs(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-
-	oldCfg := filepath.Join(home, ".config", "tether")
-	newCfg := filepath.Join(home, ".config", "buntline")
-	if err := os.MkdirAll(oldCfg, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(oldCfg, "providers.json"), []byte("[]"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	moved := MigrateLegacyDirs()
-	if len(moved) != 1 {
-		t.Fatalf("moved = %v, want the config dir", moved)
-	}
-	if _, err := os.Stat(filepath.Join(newCfg, "providers.json")); err != nil {
-		t.Errorf("migrated providers.json missing: %v", err)
-	}
-	if _, err := os.Stat(oldCfg); !os.IsNotExist(err) {
-		t.Error("old config dir still present after migration")
-	}
-
-	// Idempotent: nothing left to move.
-	if moved := MigrateLegacyDirs(); len(moved) != 0 {
-		t.Errorf("second run moved %v, want nothing", moved)
-	}
-
-	// An existing buntline dir wins: recreate a stale tether dir and
-	// check it is left alone.
-	if err := os.MkdirAll(oldCfg, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(oldCfg, "providers.json"), []byte("stale"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if moved := MigrateLegacyDirs(); len(moved) != 0 {
-		t.Errorf("migration overwrote an existing buntline dir: %v", moved)
-	}
-	data, err := os.ReadFile(filepath.Join(newCfg, "providers.json"))
-	if err != nil || string(data) != "[]" {
-		t.Errorf("buntline providers.json = %q %v, want the migrated original", data, err)
 	}
 }
 

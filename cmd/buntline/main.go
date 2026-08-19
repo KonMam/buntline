@@ -56,11 +56,6 @@ func main() {
 }
 
 func run() error {
-	// One-time rename of pre-rebrand tether directories, before anything
-	// reads config, so an upgrade keeps its providers, keys, and sessions.
-	for _, move := range config.MigrateLegacyDirs() {
-		fmt.Fprintln(os.Stderr, "buntline: migrated", move)
-	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err
