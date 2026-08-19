@@ -19,9 +19,10 @@
   let modules = $state<ModuleStatus[]>([]);
   let core = $state<ModuleStatus[]>([]);
 
-  // The Notifications card opens a settings pane the way a Models
+  // The Notifications and MCP cards open a settings pane the way a Models
   // provider card opens its setup pane: click the card, get the view.
   let notifPane = $state(false);
+  let mcpPane = $state(false);
 
   // Notification-type toggles shown in the pane, with human labels. The
   // keys are the settings keys, so the switch flips the same field the
@@ -45,6 +46,17 @@
     core = res.core;
     onchange(modules);
     if (m.id === 'mcp') void loadServers();
+  }
+
+  // Module cards that own a settings view are clickable like Models
+  // provider cards: clicking the card opens the pane, the switch on it
+  // still toggles the module.
+  function manageable(id: string) {
+    return id === 'notifications' || id === 'mcp';
+  }
+  function openPane(m: ModuleStatus) {
+    if (m.id === 'notifications') notifPane = true;
+    else if (m.id === 'mcp') mcpPane = true;
   }
 
   // MCP server management: servers from config.toml are read-only here;
@@ -114,11 +126,12 @@
 
   onMount(async () => {
     await load();
-    if (mcpEnabled) await loadServers();
   });
 
+  // Servers render only inside the MCP settings pane, so load them when
+  // the pane opens (toggling the module on also refreshes the list).
   $effect(() => {
-    if (mcpEnabled) void loadServers();
+    if (mcpPane) void loadServers();
   });
 </script>
 
@@ -246,95 +259,28 @@
         </div>
       </section>
     </div>
-  {:else}
-    <header>
-      <h1>Modules</h1>
-      <p>
-        Features are modules. Switch off what you don't use; tool changes apply to newly opened
-        sessions. External tools connect as MCP servers, managed below.
-      </p>
-    </header>
-
-    {#if core.length > 0}
-      <section class="core">
-        <h2>Core</h2>
-        <p class="hint">
-          Part of the harness itself: the agent's working surface. Always on, nothing to toggle.
+  {:else if mcpPane}
+    <div class="pane wide">
+      <button class="back" onclick={() => (mcpPane = false)}>
+        <Icon name="back" size={13} /> back
+      </button>
+      <header class="pane-head">
+        <h1>MCP</h1>
+        <p>
+          External tools connect as MCP servers. Servers you add here are stored in mcp.json;
+          entries from config.toml are shown read-only.
         </p>
-        <div class="cards">
-          {#each core as m (m.id)}
-            <article class="core-card">
-              <div class="top">
-                <h3>{m.name}</h3>
-                <span class="always">always on</span>
-              </div>
-              <p>{m.description}</p>
-              <span class="id">{m.id}</span>
-            </article>
-          {/each}
-        </div>
-      </section>
-    {/if}
+      </header>
 
-    <section class="toggleable">
-      <h2>Features</h2>
-      <p class="hint">
-        Toggleable modules. Disabled modules release their resources and cost nothing until enabled
-        again; tool changes apply to newly opened sessions.
-      </p>
-      <div class="cards">
-        {#each modules as m (m.id)}
-          <!-- The Notifications card is clickable like a Models provider
-             card: it opens the settings pane instead of just toggling.
-             role/tabindex/keydown make it a real button at runtime;
-             the check can't see the conditional role. -->
-          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-          <article
-            class:off={!m.enabled}
-            class:manageable={m.id === 'notifications'}
-            role={m.id === 'notifications' ? 'button' : undefined}
-            tabindex={m.id === 'notifications' ? 0 : undefined}
-            aria-label={m.id === 'notifications' ? 'Open notification settings' : undefined}
-            onclick={m.id === 'notifications' ? () => (notifPane = true) : undefined}
-            onkeydown={m.id === 'notifications'
-              ? (e) => e.key === 'Enter' && (notifPane = true)
-              : undefined}
-          >
-            <div class="top">
-              <h3>{m.name}</h3>
-              <button
-                class="switch"
-                class:on={m.enabled}
-                role="switch"
-                aria-checked={m.enabled}
-                aria-label="{m.name} {m.enabled ? 'enabled' : 'disabled'}"
-                onclick={(e) => {
-                  e.stopPropagation();
-                  toggle(m);
-                }}
-              >
-                <i></i>
-              </button>
-            </div>
-            <p>{m.description}</p>
-            <span class="id">
-              {m.id}
-              {#if m.id === 'notifications'}
-                <span class="manage">settings</span>
-              {/if}
-            </span>
-          </article>
-        {/each}
-      </div>
-    </section>
-
-    {#if mcpEnabled}
       <section class="mcp">
+        {#if !mcpEnabled}
+          <p class="hint warn">
+            The MCP module is off. Servers below are saved, but they only connect while the module
+            is enabled. Flip the switch on the MCP card to turn it on.
+          </p>
+        {/if}
         <h2>MCP servers</h2>
-        <p class="hint">
-          Servers added here are stored in mcp.json; entries from config.toml are shown read-only.
-          Tool changes apply to newly opened sessions.
-        </p>
+        <p class="hint">Tool changes apply to newly opened sessions.</p>
 
         {#if servers.length > 0}
           <div class="server-list">
@@ -448,7 +394,86 @@
           <div class="mcp-error">{mcpError}</div>
         {/if}
       </section>
+    </div>
+  {:else}
+    <header>
+      <h1>Modules</h1>
+      <p>
+        Features are modules. Switch off what you don't use; tool changes apply to newly opened
+        sessions. External tools connect as MCP servers, managed from the MCP module's settings.
+      </p>
+    </header>
+
+    {#if core.length > 0}
+      <section class="core">
+        <h2>Core</h2>
+        <p class="hint">
+          Part of the harness itself: the agent's working surface. Always on, nothing to toggle.
+        </p>
+        <div class="cards">
+          {#each core as m (m.id)}
+            <article class="core-card">
+              <div class="top">
+                <h3>{m.name}</h3>
+                <span class="always">always on</span>
+              </div>
+              <p>{m.description}</p>
+              <span class="id">{m.id}</span>
+            </article>
+          {/each}
+        </div>
+      </section>
     {/if}
+
+    <section class="toggleable">
+      <h2>Features</h2>
+      <p class="hint">
+        Toggleable modules. Disabled modules release their resources and cost nothing until enabled
+        again; tool changes apply to newly opened sessions.
+      </p>
+      <div class="cards">
+        {#each modules as m (m.id)}
+          <!-- The Notifications and MCP cards are clickable like Models
+             provider cards: they open their settings pane instead of just
+             toggling. role/tabindex/keydown make them real buttons at
+             runtime; the check can't see the conditional role. -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <article
+            class:off={!m.enabled}
+            class:manageable={manageable(m.id)}
+            role={manageable(m.id) ? 'button' : undefined}
+            tabindex={manageable(m.id) ? 0 : undefined}
+            aria-label={manageable(m.id) ? `Open ${m.name} settings` : undefined}
+            onclick={manageable(m.id) ? () => openPane(m) : undefined}
+            onkeydown={manageable(m.id) ? (e) => e.key === 'Enter' && openPane(m) : undefined}
+          >
+            <div class="top">
+              <h3>{m.name}</h3>
+              <button
+                class="switch"
+                class:on={m.enabled}
+                role="switch"
+                aria-checked={m.enabled}
+                aria-label="{m.name} {m.enabled ? 'enabled' : 'disabled'}"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  toggle(m);
+                }}
+              >
+                <i></i>
+              </button>
+            </div>
+            <p>{m.description}</p>
+            <span class="id">
+              {m.id}
+              {#if manageable(m.id)}
+                <span class="manage">settings</span>
+              {/if}
+            </span>
+          </article>
+        {/each}
+      </div>
+    </section>
   {/if}
 </div>
 
@@ -502,6 +527,12 @@
     color: var(--text-muted);
     margin: 0 0 14px;
     line-height: 1.5;
+  }
+  /* The MCP pane warns when the module is off: servers are saved but
+     won't connect until the card's switch is flipped. */
+  .hint.warn {
+    color: var(--warn);
+    font-weight: 500;
   }
   .core-card {
     border: 1px solid var(--border);
@@ -623,6 +654,11 @@
   /* --- Notifications settings pane (the card opens it) --- */
   .pane {
     max-width: 640px;
+  }
+  /* The MCP pane holds the server list and the add form, so it gets
+     the room the top-level section used to have. */
+  .pane.wide {
+    max-width: 900px;
   }
   .back {
     display: inline-flex;
