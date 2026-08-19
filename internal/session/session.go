@@ -260,7 +260,7 @@ func (s *Store) Search(query string, limit int) ([]SearchHit, error) {
 			continue
 		}
 		for _, msg := range msgs {
-			if msg.Kind == "instructions" || msg.Role == provider.RoleTool {
+			if msg.Kind != "" || msg.Role == provider.RoleTool {
 				continue
 			}
 			idx := strings.Index(strings.ToLower(msg.Content), q)

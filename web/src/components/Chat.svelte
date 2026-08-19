@@ -218,10 +218,10 @@
             messages={session.messages}
             diffs={session.diffs}
             bg={session.bg}
-            onfork={item.msg.role === 'user' && item.msg.kind !== 'instructions' && onfork
+            onfork={item.msg.role === 'user' && !item.msg.kind && onfork
               ? () => onfork(item.index)
               : undefined}
-            onedit={item.msg.role === 'user' && item.msg.kind !== 'instructions' && onedit
+            onedit={item.msg.role === 'user' && !item.msg.kind && onedit
               ? () => onedit(item.index)
               : undefined}
           />

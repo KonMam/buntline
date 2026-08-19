@@ -765,12 +765,14 @@ func TestBackgroundedToolDeliversAfterGrace(t *testing.T) {
 	// the session, so the real result arrives as a user message.
 	msgs := a.Messages()
 	var placeholder, real bool
+	var realKind string
 	for _, m := range msgs {
 		if m.Role == provider.RoleTool && m.ToolCallID == "c1" && strings.HasPrefix(m.Content, "[started") {
 			placeholder = true
 		}
 		if m.Role == provider.RoleUser && strings.Contains(m.Content, "long done") {
 			real = true
+			realKind = m.Kind
 		}
 	}
 	if !placeholder {
@@ -778,6 +780,9 @@ func TestBackgroundedToolDeliversAfterGrace(t *testing.T) {
 	}
 	if !real {
 		t.Error("real backgrounded result missing from transcript")
+	}
+	if realKind != "background" {
+		t.Errorf("backgrounded result kind = %q, want %q", realKind, "background")
 	}
 	assertToolPairing(t, msgs)
 

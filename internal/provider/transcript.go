@@ -57,7 +57,7 @@ func RepairToolPairing(msgs []Message) ([]Message, []string) {
 			closeOpen()
 			out = append(out, Message{
 				Role:    RoleUser,
-				Kind:    "instructions",
+				Kind:    "tool_result",
 				Content: "[tool result]\n" + m.Content,
 			})
 			notes = append(notes, "tool result for "+m.ToolCallID+" answered no open call; kept as a user message")

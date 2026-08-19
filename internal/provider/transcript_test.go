@@ -51,6 +51,9 @@ func TestRepairToolPairingDuplicateAnswer(t *testing.T) {
 	if got[2].Role != RoleUser {
 		t.Errorf("duplicate answer role = %s, want user", got[2].Role)
 	}
+	if got[2].Kind != "tool_result" {
+		t.Errorf("duplicate answer kind = %q, want %q", got[2].Kind, "tool_result")
+	}
 	if !strings.Contains(got[2].Content, "real result") {
 		t.Errorf("repair lost the result: %q", got[2].Content)
 	}
@@ -102,6 +105,9 @@ func TestRepairToolPairingOrphanResult(t *testing.T) {
 	}
 	if got[1].Role != RoleUser || !strings.Contains(got[1].Content, "orphan output") {
 		t.Errorf("orphan = %+v, want its text kept as a user message", got[1])
+	}
+	if got[1].Kind != "tool_result" {
+		t.Errorf("orphan result kind = %q, want %q", got[1].Kind, "tool_result")
 	}
 	assertValid(t, got)
 }

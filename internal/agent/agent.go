@@ -602,7 +602,7 @@ func bgResultMessage(out toolOutcome) provider.Message {
 	}
 	return provider.Message{
 		Role:    provider.RoleUser,
-		Kind:    "instructions",
+		Kind:    "background",
 		Content: "[background " + name + " finished]\n" + out.msg.Content,
 	}
 }

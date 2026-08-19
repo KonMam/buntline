@@ -44,16 +44,34 @@
       ? renderMarkdown(msg.content)
       : '',
   );
+
+  // Machinery messages are harness-generated user-role context: project
+  // instructions (AGENTS.md), the memory index, background tool results,
+  // and repaired tool results. They render collapsed under a label that
+  // says what they are, never as a real user bubble.
+  const kindLabel = (kind: string) => {
+    switch (kind) {
+      case 'instructions':
+        return 'project instructions loaded';
+      case 'background':
+        return 'background task finished';
+      case 'tool_result':
+        return 'tool result';
+      default:
+        return kind;
+    }
+  };
 </script>
 
-{#if msg.kind === 'instructions'}
+{#if msg.kind && msg.kind !== 'summary'}
   {#if msg.role === 'user'}
     <details class="instructions">
-      <summary>project instructions loaded</summary>
+      <summary>{kindLabel(msg.kind)}</summary>
       <pre>{msg.content}</pre>
     </details>
   {/if}
-  <!-- the assistant acknowledgement is machinery; not rendered -->
+  <!-- assistant-role machinery (the project-instructions acknowledgement)
+       is not rendered -->
 {:else if msg.role === 'user' && msg.kind !== 'summary'}
   <div class="user">
     <div class="head">

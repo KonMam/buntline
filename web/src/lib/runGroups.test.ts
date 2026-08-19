@@ -126,4 +126,14 @@ describe('buildRenderItems', () => {
     const items = buildRenderItems([user('hello'), instructions], 0, false);
     expect(items.map((i) => i.kind)).toEqual(['msg', 'msg']);
   });
+
+  it('keeps background results as standalone items', () => {
+    const bg: Message = {
+      role: 'user',
+      content: '[background bash finished]\nok',
+      kind: 'background',
+    };
+    const items = buildRenderItems([user('hello'), bg], 0, false);
+    expect(items.map((i) => i.kind)).toEqual(['msg', 'msg']);
+  });
 });
