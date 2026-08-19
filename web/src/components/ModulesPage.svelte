@@ -408,6 +408,7 @@
               { value: 'http', label: 'http' },
             ]}
             value={addTransport}
+            label="transport"
             onselect={(v) => (addTransport = v)}
             direction="down"
             title="transport"

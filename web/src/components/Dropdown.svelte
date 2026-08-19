@@ -10,6 +10,7 @@
   let {
     options,
     value,
+    label,
     onselect,
     disabled = false,
     title = '',
@@ -17,6 +18,9 @@
   }: {
     options: Option[];
     value: string;
+    /** Fixed text on the trigger; the selection itself is only marked by
+        the check in the open menu. Keeps the trigger short and stable. */
+    label: string;
     onselect: (value: string) => void;
     disabled?: boolean;
     title?: string;
@@ -27,8 +31,6 @@
   let active = $state(-1); // keyboard-highlighted row
   let root = $state<HTMLElement | null>(null);
   let list = $state<HTMLElement | null>(null);
-
-  const current = $derived(options.find((o) => o.value === value));
 
   function toggle() {
     if (disabled) return;
@@ -99,7 +101,7 @@
     onclick={toggle}
     {onkeydown}
   >
-    <span class="label">{current?.label ?? value}</span>
+    <span class="label">{label}</span>
     <Icon name="chevron" size={9} />
   </button>
 

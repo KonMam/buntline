@@ -12,6 +12,7 @@ import type {
   TaskItem,
 } from './types';
 import { foldTasks } from './tasks';
+import { foldBgEvents } from './background';
 import { queuedLanded } from './queued';
 
 export class SessionState {
@@ -102,15 +103,12 @@ export class SessionState {
   // start (the tool outlived its grace period and moved off the loop),
   // and the matching tool_end (delivered when the loop picks the real
   // result up) clears it. Cards for these calls show a running state
-  // until their real result lands.
-  bg = $derived.by(() => {
-    const s = new Set<string>();
-    for (const e of this.activity) {
-      if (e.type === 'tool_bg' && e.tool_id) s.add(e.tool_id);
-      if (e.type === 'tool_end' && e.tool_id) s.delete(e.tool_id);
-    }
-    return s;
-  });
+  // until their real result lands. The fold lives in background.ts:
+  // turn boundaries clear the set, because a backgrounded tool can never
+  // outlive its turn (the server drops stale results without a
+  // tool_end), so without that reset a dead call would keep its card
+  // "running" forever.
+  bg = $derived(foldBgEvents(this.activity));
 
   // Files the agent changed this session, for badges in the file browser.
   touchedFiles = $derived.by(() => {

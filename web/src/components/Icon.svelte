@@ -1,7 +1,7 @@
 <script lang="ts">
   // Inline stroke icons, 16px grid, currentColor; no icon font, no
   // dependency. Names are the vocabulary of the app's meta-controls;
-  // the composer's send arrow and attach image live here too.
+  // the composer's send arrow and paperclip also live here.
   let {
     name,
     size = 16,
@@ -36,6 +36,8 @@
     bell: 'M8 1.75a4.5 4.5 0 00-4.5 4.5c0 3-1.2 4.25-1.5 4.75h12c-.3-.5-1.5-1.75-1.5-4.75a4.5 4.5 0 00-4.5-4.5zM6.25 12.5a1.75 1.75 0 003.5 0',
     image:
       'M2.5 3.5h11a1 1 0 011 1v7a1 1 0 01-1 1h-11a1 1 0 01-1-1v-7a1 1 0 011-1zM2.75 11.25l3.25-3.75 2.5 2.5 2.25-2.5 2.75 3.75M10.75 6.25a.75.75 0 100-1.5.75.75 0 000 1.5z',
+    paperclip:
+      'M15.19 8.02 L8.02 15.19 A4.68 4.68 0 0 1 1.4 8.57 L8.57 1.4 A3.12 3.12 0 0 1 12.98 5.81 L5.81 12.98 A1.56 1.56 0 0 1 3.6 10.78 L10.22 4.16',
     send: 'M8 13.5V2.5M3.5 7L8 2.5l4.5 4.5',
   };
 </script>
@@ -52,5 +54,11 @@
   aria-hidden="true"
   class={klass}
 >
-  <path d={paths[name] ?? ''} />
+  {#if name === 'stop'}
+    <!-- Solid square: the universal stop glyph, unlike the hollow
+         strokes of the rest of the set. -->
+    <path d={paths.stop} fill="currentColor" stroke="none" />
+  {:else}
+    <path d={paths[name] ?? ''} />
+  {/if}
 </svg>

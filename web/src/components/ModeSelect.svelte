@@ -17,6 +17,7 @@
 <Dropdown
   options={modes}
   value={current}
+  label="mode"
   onselect={(v) => void session.setMode(v)}
   title="Approval mode for this session, effective from the next tool call"
 />

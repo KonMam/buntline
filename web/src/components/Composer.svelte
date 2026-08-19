@@ -462,7 +462,7 @@
           title="Attach an image"
           aria-label="Attach an image"
         >
-          <Icon name="image" size={15} />
+          <Icon name="paperclip" size={15} />
         </button>
         <div class="selectors">
           <ModeSelect {session} />
@@ -470,9 +470,13 @@
         </div>
         <div class="actions">
           {#if session.busy}
-            <button class="stop" onclick={() => session.interrupt()} title="Interrupt (Esc)">
-              <Icon name="stop" size={12} />
-              stop
+            <button
+              class="stop"
+              onclick={() => session.interrupt()}
+              title="Interrupt (Esc)"
+              aria-label="Interrupt"
+            >
+              <Icon name="stop" size={13} />
             </button>
           {/if}
           <button
@@ -692,16 +696,16 @@
   .stop {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12.5px;
-    padding: 4px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border-strong);
-    color: var(--text);
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    flex-shrink: 0;
   }
   .stop:hover {
-    border-color: var(--danger);
     color: var(--danger);
+    background: var(--surface-2);
   }
   /* Narrow composer: the mode/model dropdowns move to their own
      full-width line so their labels never fight the attach and send

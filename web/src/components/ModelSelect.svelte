@@ -81,6 +81,7 @@
 <Dropdown
   {options}
   value={current}
+  label="model"
   onselect={pick}
   disabled={session.busy}
   title="model for this session"
