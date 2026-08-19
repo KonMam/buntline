@@ -48,7 +48,10 @@ describe('foldTasks', () => {
   });
 
   it('ignores non-tasks events', () => {
-    const events = [tasksEvent(0, [task('a', 'pending')]), { type: 'turn_end', time: at(1) } as AgentEvent];
+    const events = [
+      tasksEvent(0, [task('a', 'pending')]),
+      { type: 'turn_end', time: at(1) } as AgentEvent,
+    ];
     expect(foldTasks(events)).toEqual([task('a', 'pending')]);
   });
 });

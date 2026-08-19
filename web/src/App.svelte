@@ -11,8 +11,12 @@
   import ModelsPage from './components/ModelsPage.svelte';
   import FolderPicker from './components/FolderPicker.svelte';
   import SessionSwitcher from './components/SessionSwitcher.svelte';
+  import { NotificationCenter } from './lib/notifications.svelte';
 
   const session = new SessionState();
+  const notif = new NotificationCenter({
+    onOpen: (id) => void select(id),
+  });
   let sessions = $state<SessionMeta[]>([]);
   let modules = $state<ModuleStatus[]>([]);
   let view = $state<View>('chat');
@@ -131,6 +135,7 @@
 
   async function refreshSessions() {
     sessions = await api.listSessions();
+    notif.setSessions(sessions);
   }
 
   async function select(id: string) {
@@ -139,6 +144,7 @@
     // the chat is the destination.
     if (sidebarOverlay) showSidebar = false;
     if (session.meta?.id !== id) await session.load(id);
+    notif.setActive(id);
   }
 
   async function createIn(workdir: string) {
@@ -205,6 +211,9 @@
     const res = await api.modules();
     modules = res.modules;
     await refreshSessions();
+    // The notification stream runs for the life of the app: it needs no
+    // session to be selected (other-session events are its whole point).
+    notif.start();
     if (!configured) {
       view = 'models';
       return;
@@ -294,6 +303,8 @@
       {gitEnabled}
       {filesEnabled}
       {mcpEnabled}
+      {notif}
+      onnotifyopen={(id) => void select(id)}
       onfork={forkFrom}
       onedit={editFrom}
       bind:showPanel
@@ -315,6 +326,34 @@
     <ModelsPage {session} {ollamaEnabled} {configured} onconfigured={refreshConfigured} />
   {/if}
 </div>
+
+{#if notif.attention}
+  {@const attention = notif.attention}
+  <button class="attention" onclick={() => select(attention.sessionId)}>
+    <Icon name="bell" size={13} />
+    <span class="attention-text">
+      {attention.title}: {attention.body}
+      <span class="attention-sess"> · {attention.sessionTitle}</span>
+    </span>
+    <span
+      class="attention-close"
+      role="button"
+      tabindex="0"
+      onclick={(e) => {
+        e.stopPropagation();
+        notif.dismissAttention();
+      }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.stopPropagation();
+          notif.dismissAttention();
+        }
+      }}
+    >
+      dismiss
+    </span>
+  </button>
+{/if}
 
 {#if sidebarOverlay && showSidebar}
   <button class="scrim" aria-label="Close the session list" onclick={() => (showSidebar = false)}
@@ -447,5 +486,51 @@
     z-index: 7;
     background: var(--bg);
     border: 1px solid var(--border);
+  }
+  /* Attention banner: another session needs the user. Sits above the
+     chat, below the modal overlays. */
+  .attention {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(560px, calc(100vw - 32px));
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    padding: 9px 12px;
+    font-size: 12.5px;
+    color: var(--text-strong);
+    cursor: pointer;
+  }
+  .attention:hover {
+    border-color: var(--accent);
+  }
+  .attention-text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .attention-sess {
+    color: var(--text-muted);
+  }
+  .attention-close {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 2px 5px;
+    border-radius: 5px;
+  }
+  .attention-close:hover {
+    color: var(--text-strong);
+    background: var(--surface-2);
   }
 </style>

@@ -68,3 +68,27 @@ Plain IPs, `localhost`, and the address you bound need no entry.
 One caveat when Ollama runs on a different machine than buntline: vision
 support is detected by recognizing localhost Ollama endpoints, so a
 remote Ollama is treated as text-only.
+
+## Notifications on mobile (and other browsers)
+
+buntline raises in-app and OS-level notifications while the UI is open:
+approvals and questions from any session (even one you are not looking
+at), turn completions, and errors. The bell in the chat header lists
+them, and each browser remembers its own settings (per-type toggles,
+desktop popups on/off) in `localStorage`.
+
+OS-level popups need a **secure context**, which means:
+
+- `http://localhost:7433` works as-is (loopback counts as secure).
+- A VPN name reached over plain HTTP (`http://box.tailnet.ts.net:7433`)
+  does **not** show popups. Use `tailscale serve` (which gives HTTPS),
+  or another reverse proxy with TLS. The in-app bell and banner still
+  work over plain HTTP.
+- On **iOS Safari**, `Notification.requestPermission` only works after
+  you add the page to your home screen (iOS 16.4+; earlier iOS versions
+  never show web notifications). With the manifest buntline ships, "Add
+  to Home Screen" also gives the app its own icon and standalone mode.
+  Chrome/Android and desktop browsers work without installation.
+
+Multiple open tabs never double popups: one tab is elected to raise
+them, and the in-app list is shared per tab.

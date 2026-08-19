@@ -97,6 +97,18 @@ export interface SessionMeta {
   // running and which tool the main loop is executing.
   busy?: boolean;
   running_tool?: string;
+  // "approval" or "question" while the session is paused on a card the
+  // user must answer; "" (or absent) otherwise. Powers the sidebar badge
+  // and the notification bell's attention banner.
+  waiting?: 'approval' | 'question' | '';
+}
+
+// GlobalEvent is one frame of /api/events: a non-delta agent event from
+// any session, tagged with the session it came from (mirror of the Go
+// server.globalEvent).
+export interface GlobalEvent {
+  session_id: string;
+  event: AgentEvent;
 }
 
 export interface SessionDetail {

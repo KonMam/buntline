@@ -11,6 +11,8 @@
   import Icon from './Icon.svelte';
   import PromptOverlay from './PromptOverlay.svelte';
   import { api } from '../lib/api';
+  import type { NotificationCenter } from '../lib/notifications.svelte';
+  import NotificationBell from './NotificationBell.svelte';
 
   let showPrompt = $state(false);
 
@@ -20,6 +22,8 @@
     gitEnabled,
     filesEnabled,
     mcpEnabled,
+    notif,
+    onnotifyopen,
     onfork,
     onedit,
     showPanel = $bindable(),
@@ -30,6 +34,8 @@
     gitEnabled: boolean;
     filesEnabled: boolean;
     mcpEnabled: boolean;
+    notif?: NotificationCenter;
+    onnotifyopen?: (id: string) => void;
     onfork?: (index: number) => void;
     onedit?: (index: number) => void;
     showPanel: boolean;
@@ -162,6 +168,9 @@
       >
         prompt
       </button>
+      {#if notif}
+        <NotificationBell center={notif} onopen={(id) => onnotifyopen?.(id)} />
+      {/if}
       {#if session.meta}
         <a
           class="icon-btn"

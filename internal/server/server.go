@@ -44,12 +44,18 @@ type Server struct {
 	resolving map[string]chan struct{} // session id → attach in progress
 	pending   map[string]chan agent.Decision
 	questions map[string]chan string // ask_user questions awaiting an answer
+
+	// globalHub fans every session's non-delta events to /api/events:
+	// one connection sees the whole harness, which is what the
+	// notification bell (cross-session attention, turn ends, errors)
+	// subscribes to.
+	globalHub *hub[globalEvent]
 }
 
 // liveSession is a session with an in-memory agent attached.
 type liveSession struct {
 	agent    *agent.Agent
-	hub      *hub
+	hub      *hub[agent.Event]
 	cancel   context.CancelFunc // cancels the in-flight turn, if any
 	workdir  string
 	registry *tools.Registry
@@ -146,6 +152,7 @@ func New(cfg config.Config, store *session.Store, static http.Handler, modules *
 		resolving: map[string]chan struct{}{},
 		pending:   map[string]chan agent.Decision{},
 		questions: map[string]chan string{},
+		globalHub: newHub[globalEvent](),
 	}
 	go s.janitor()
 	return s
@@ -220,6 +227,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sessions/{id}", s.handleGetSession)
 	mux.HandleFunc("DELETE /api/sessions/{id}", s.handleDeleteSession)
 	mux.HandleFunc("GET /api/sessions/{id}/events", s.handleEvents)
+	mux.HandleFunc("GET /api/events", s.handleGlobalEvents)
 	mux.HandleFunc("POST /api/sessions/{id}/messages", s.handleSendMessage)
 	mux.HandleFunc("POST /api/sessions/{id}/compact", s.handleCompact)
 	mux.HandleFunc("POST /api/sessions/{id}/interrupt", s.handleInterrupt)
@@ -476,7 +484,7 @@ func (s *Server) attach(id string) (*liveSession, error) {
 	registry := tools.NewRegistry()
 	var interceptors []agent.ToolInterceptor
 	var observers []func(agent.Event)
-	h := newHub()
+	h := newHub[agent.Event]()
 	ls := &liveSession{hub: h, workdir: workdir, registry: registry, subagents: newSubagentRegistry(), overrides: ws.Modules}
 	if s.modules != nil {
 		for _, t := range s.modules.Tools(workdir, ws.Modules) {
@@ -685,6 +693,13 @@ func (s *Server) dispatch(sessionID string, ls *liveSession, ev agent.Event) {
 	}
 	ls.hub.broadcast(ev)
 
+	// The global stream carries structure, not token chatter: deltas are
+	// ephemeral and high-frequency, everything else is a real event a
+	// notification bell (or future observers) might care about.
+	if ev.Type != agent.EventTextDelta && ev.Type != agent.EventThinkingDelta {
+		s.globalHub.broadcast(globalEvent{SessionID: sessionID, Event: ev})
+	}
+
 	// Automatic compaction, threshold-driven: when the profile declares a
 	// context window and a turn's prompt crossed 85% of it, compact after
 	// the turn ends. The compact event and the next turn's usage make the
@@ -775,6 +790,28 @@ func (s *Server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+// waitingFor reports whether a live session is paused on the user:
+// "approval" or "question" while a card is open, "" otherwise. This is
+// what tells the sidebar and the notification bell "this session needs
+// you", as opposed to merely busy.
+func (s *Server) waitingFor(id string) string {
+	s.mu.Lock()
+	ls, ok := s.live[id]
+	s.mu.Unlock()
+	if !ok {
+		return ""
+	}
+	ls.partialMu.Lock()
+	defer ls.partialMu.Unlock()
+	if ls.pendingApproval != nil {
+		return "approval"
+	}
+	if ls.pendingQuestion != nil {
+		return "question"
+	}
+	return ""
+}
+
 func (s *Server) handleListSessions(w http.ResponseWriter, _ *http.Request) {
 	metas, err := s.store.List()
 	if err != nil {
@@ -800,6 +837,7 @@ func (s *Server) handleListSessions(w http.ResponseWriter, _ *http.Request) {
 			"updated_at":   m.UpdatedAt,
 			"busy":         busy,
 			"running_tool": runningTool,
+			"waiting":      s.waitingFor(m.ID),
 		})
 	}
 	writeJSON(w, out)
@@ -1505,6 +1543,44 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 
 	sub := ls.hub.subscribe()
 	defer ls.hub.unsubscribe(sub)
+	// Flush headers immediately so the client's connect returns without
+	// waiting for the first event.
+	flusher.Flush()
+
+	for {
+		select {
+		case ev := <-sub:
+			data, err := json.Marshal(ev)
+			if err != nil {
+				continue
+			}
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
+}
+
+// handleGlobalEvents is the cross-session SSE endpoint: every session's
+// non-delta events, tagged with the session they came from. Replays
+// nothing (the UI seeds from GET /api/sessions), then streams until the
+// client disconnects — the same contract as the per-session stream.
+func (s *Server) handleGlobalEvents(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		httpError(w, http.StatusInternalServerError, fmt.Errorf("streaming unsupported"))
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+
+	sub := s.globalHub.subscribe()
+	defer s.globalHub.unsubscribe(sub)
+	// Flush the headers immediately: a client's request returns as soon
+	// as they arrive, and without an event the handler would otherwise
+	// hold them (SSE clients would block on connect forever).
+	flusher.Flush()
 
 	for {
 		select {

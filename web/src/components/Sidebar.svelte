@@ -97,6 +97,8 @@
             class="busy-dot"
             title={s.running_tool ? `running ${s.running_tool}` : 'running a turn'}
           ></span>
+        {:else if s.waiting}
+          <span class="waiting" title={`needs you: ${s.waiting}`}>!</span>
         {/if}
         <span class="sub" title={s.workdir}>
           {#if isWorktree(s.workdir)}<i class="wt">worktree</i>{/if}{shortDir(s.workdir)}
@@ -212,6 +214,22 @@
     border-radius: 50%;
     background: var(--accent);
     animation: busy-pulse 1.6s ease-in-out infinite;
+  }
+  /* A session paused on an approval/question the user must answer:
+     amber, not the running pulse. */
+  .waiting {
+    position: absolute;
+    top: 8px;
+    right: 30px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--warn, var(--accent));
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
   }
   @keyframes busy-pulse {
     50% {
