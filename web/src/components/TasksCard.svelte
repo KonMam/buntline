@@ -4,6 +4,9 @@
   // events), so it updates live as todo_write lands and survives a
   // reload from the replayed event stream. The model owns the list; the
   // user steers it by talking, so there are no editing controls here.
+  // The card is collapsible: the header (label + live counts) always
+  // stays visible, and the list tucks away when a long todo list is
+  // eating the trace.
   import type { TaskItem } from '../lib/types';
 
   let { tasks }: { tasks: TaskItem[] } = $props();
@@ -21,8 +24,9 @@
   );
 </script>
 
-<div class="tasks">
-  <div class="head">
+<details class="tasks" open>
+  <summary>
+    <span class="disclosure" aria-hidden="true"></span>
     <span class="label">tasks</span>
     <span class="counts">
       {#if counts.pending > 0}<span class="count pending">{counts.pending} pending</span>{/if}
@@ -33,7 +37,7 @@
         <span class="count completed">{counts.completed} completed</span>
       {/if}
     </span>
-  </div>
+  </summary>
 
   {#if sorted.length === 0}
     <div class="empty">no tasks yet</div>
@@ -47,7 +51,7 @@
       {/each}
     </ul>
   {/if}
-</div>
+</details>
 
 <style>
   .tasks {
@@ -55,15 +59,32 @@
     border-radius: 8px;
     background: var(--surface);
     padding: 9px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
   }
-  .head {
+  summary {
     display: flex;
     align-items: baseline;
     gap: 8px;
     flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure {
+    color: var(--text-muted);
+    font-family: var(--mono);
+    width: 10px;
+  }
+  .disclosure::after {
+    content: '+';
+  }
+  .tasks[open] .disclosure::after {
+    content: '−';
+  }
+  summary:hover .label {
+    color: var(--text-strong);
   }
   .label {
     font-size: 10.5px;
@@ -91,10 +112,11 @@
   .empty {
     color: var(--text-muted);
     font-size: 12.5px;
+    margin-top: 7px;
   }
   ul {
     list-style: none;
-    margin: 0;
+    margin: 7px 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
