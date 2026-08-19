@@ -12,6 +12,7 @@ import type {
   TaskItem,
 } from './types';
 import { foldTasks } from './tasks';
+import { queuedLanded } from './queued';
 
 export class SessionState {
   meta = $state<SessionMeta | null>(null);
@@ -227,9 +228,13 @@ export class SessionState {
         }
         // A queued steering message landed in the transcript: drop the
         // matching pending bubble so the thread shows one copy, not two.
+        // Content matching, not identity: the server may have expanded
+        // the message (attachment contents inlined), and the loop can
+        // deliver several queued messages in one drain, so the first
+        // queued entry matching the event's content is the one that
+        // landed.
         if (ev.message?.role === 'user' && !ev.parent_id) {
-          const text = ev.message.content;
-          const i = this.queued.findIndex((q) => q.text === text);
+          const i = this.queued.findIndex((q) => queuedLanded(ev.message!.content, q.text));
           if (i >= 0) this.queued.splice(i, 1);
         }
         break;
@@ -331,7 +336,19 @@ export class SessionState {
       // Show it as pending now so it does not look lost; the message
       // event removes it.
       if (res && res.queued) {
-        this.queued = [...this.queued, { text: content, time: new Date().toISOString() }];
+        // The SSE message event and this response race: the loop can
+        // pick the steer up (and emit its message event) before the
+        // fetch resolves — the event stream is already open while the
+        // fetch is a fresh request, so the event often wins. If the
+        // message already landed in the transcript, adding the bubble
+        // would strand it: the event that would have removed it has
+        // already passed.
+        const landed = this.messages.some(
+          (m) => m.role === 'user' && queuedLanded(m.content, content),
+        );
+        if (!landed) {
+          this.queued = [...this.queued, { text: content, time: new Date().toISOString() }];
+        }
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : String(e);
