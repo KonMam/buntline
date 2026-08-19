@@ -108,8 +108,8 @@
         <h2>3 · project agents and commands</h2>
         {#if agents.length === 0 && commands.length === 0}
           <p class="note">
-            None defined. Agents live in <code>.buntline/agents/*.md</code> (name, description, tools
-            in the front matter; the body is the agent's prompt) and commands in
+            None defined. Agents live in <code>.buntline/agents/*.md</code> (name, description,
+            tools in the front matter; the body is the agent's prompt) and commands in
             <code>.buntline/commands/*.md</code> (the body is sent as the message;
             <code>$ARGUMENTS</code> marks where the arguments go).
           </p>
