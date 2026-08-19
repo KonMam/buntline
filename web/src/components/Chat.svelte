@@ -323,7 +323,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-shrink: 0;
+    /* The git chip inside can grow wide (long branch names); it must be
+       allowed to yield space to the title instead of overflowing. */
+    min-width: 0;
   }
   .prompt-btn {
     font-size: 12px;

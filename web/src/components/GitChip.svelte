@@ -69,7 +69,7 @@
       onclick={() => (open = !open)}
       title={changed > 0 ? `${changed} changed files on ${branch}` : `clean on ${branch}`}
     >
-      {branch}
+      <span class="branch">{branch}</span>
       {#if additions > 0}<em class="add">+{additions}</em>{/if}
       {#if deletions > 0}<em class="del">−{deletions}</em>{/if}
       {#if changed > 0 && additions === 0 && deletions === 0}<em>· {changed}</em>{/if}
@@ -112,6 +112,8 @@
 <style>
   .git {
     position: relative;
+    /* Shrink below the chip's text when the header is tight. */
+    min-width: 0;
   }
   .chip {
     display: inline-flex;
@@ -124,6 +126,16 @@
     border-radius: 20px;
     padding: 2px 9px;
     white-space: nowrap;
+    /* A long branch name truncates inside the chip instead of pushing
+       the header's controls off a narrow screen; the full name is in
+       the button's title. */
+    max-width: min(200px, 34vw);
+  }
+  /* The branch name is the shrinkable part; the +N/−N counters stay. */
+  .branch {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
   .chip:hover {
     color: var(--text);
