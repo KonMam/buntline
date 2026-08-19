@@ -2141,24 +2141,55 @@ type httpApprover struct {
 	ls        *liveSession
 }
 
+// autoDecision resolves a request without a human round-trip, and reports
+// whether it did. Session approval modes ("plan" denies, "auto" allows,
+// "auto_edit" allows the edit tools) and the repository's durable
+// allowlist all answer here; ok=false means a human must decide.
+func (h *httpApprover) autoDecision(req agent.ApprovalRequest) (agent.Decision, bool) {
+	if h.ls == nil {
+		return agent.DecisionDeny, false
+	}
+	switch h.ls.getMode() {
+	case "plan":
+		return agent.DecisionDeny, true // read-only: propose, don't act
+	case "auto":
+		return agent.DecisionAllow, true
+	case "auto_edit":
+		if req.ToolName == "write_file" || req.ToolName == "edit_file" {
+			return agent.DecisionAllow, true
+		}
+	}
+	// The repository's durable allowlist, read fresh so an entry
+	// added moments ago (or by a git pull) applies immediately.
+	ws := config.LoadWorkdirSettings(h.ls.workdir)
+	if config.Allowed(ws.Allow, req.ToolName, req.ToolArgs) {
+		return agent.DecisionAllow, true
+	}
+	return agent.DecisionDeny, false
+}
+
+// AnnounceApproval implements agent.ApprovalAnnouncer: emit the
+// approval_request event only when a human will actually be asked. Calls
+// autoDecision resolves are never announced, so the bell, attention
+// banner, and OS popups don't fire for approvals that never reach a
+// human — the agent's request→result pair would otherwise read as "needs
+// you" for an instant on every auto-approved call.
+func (h *httpApprover) AnnounceApproval(req agent.ApprovalRequest) {
+	if h.ls == nil {
+		return
+	}
+	if _, auto := h.autoDecision(req); auto {
+		return
+	}
+	h.server.dispatch(h.sessionID, h.ls, agent.Event{
+		Type: agent.EventApprovalRequest, ApprovalID: req.ID,
+		ToolName: req.ToolName, ToolArgs: req.ToolArgs, Time: time.Now(),
+	})
+}
+
 func (h *httpApprover) RequestApproval(ctx context.Context, req agent.ApprovalRequest) (agent.Decision, error) {
-	if h.ls != nil {
-		switch h.ls.getMode() {
-		case "plan":
-			return agent.DecisionDeny, nil // read-only: propose, don't act
-		case "auto":
-			return agent.DecisionAllow, nil
-		case "auto_edit":
-			if req.ToolName == "write_file" || req.ToolName == "edit_file" {
-				return agent.DecisionAllow, nil
-			}
-		}
-		// The repository's durable allowlist, read fresh so an entry
-		// added moments ago (or by a git pull) applies immediately.
-		ws := config.LoadWorkdirSettings(h.ls.workdir)
-		if config.Allowed(ws.Allow, req.ToolName, req.ToolArgs) {
-			return agent.DecisionAllow, nil
-		}
+	if d, auto := h.autoDecision(req); auto {
+		return d, nil
 	}
 	ch := make(chan agent.Decision, 1)
 	h.server.mu.Lock()

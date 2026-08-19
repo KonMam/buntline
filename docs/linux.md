@@ -74,8 +74,10 @@ remote Ollama is treated as text-only.
 buntline raises in-app and OS-level notifications while the UI is open:
 approvals and questions from any session (even one you are not looking
 at), turn completions, and errors. The bell in the chat header lists
-them, and each browser remembers its own settings (per-type toggles,
-desktop popups on/off) in `localStorage`.
+them. Notifications are a module: under **Modules**, the Notifications
+card opens the settings view, where each browser remembers its own
+choices (per-type toggles, desktop popups on/off) in `localStorage`, and
+the module switch turns the whole feature off.
 
 OS-level popups need a **secure context**, which means:
 

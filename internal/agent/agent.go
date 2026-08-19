@@ -984,7 +984,15 @@ func (a *Agent) preApproved(calls []provider.ToolCall) bool {
 func (a *Agent) requestApproval(ctx context.Context, call provider.ToolCall) (Decision, error) {
 	id := newID()
 	req := ApprovalRequest{ID: id, ToolName: call.Name, ToolArgs: call.Args}
-	a.emit(Event{Type: EventApprovalRequest, ApprovalID: id, ToolName: call.Name, ToolArgs: call.Args})
+	// Announce the request. Approvers that decide without a human (session
+	// approval modes, durable allowlists) implement ApprovalAnnouncer and
+	// emit the event themselves only when a human is actually being asked;
+	// everyone else gets the event unconditionally, as before.
+	if ann, ok := a.cfg.Approver.(ApprovalAnnouncer); ok {
+		ann.AnnounceApproval(req)
+	} else {
+		a.emit(Event{Type: EventApprovalRequest, ApprovalID: id, ToolName: call.Name, ToolArgs: call.Args})
+	}
 
 	decision, err := a.cfg.Approver.RequestApproval(ctx, req)
 	if err != nil {

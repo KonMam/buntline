@@ -2,12 +2,36 @@
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
   import type { MCPServerInfo, ModuleStatus } from '../lib/types';
+  import type { NotificationCenter } from '../lib/notifications.svelte';
+  import { kindLabel } from '../lib/notifications.svelte';
+  import Icon from './Icon.svelte';
   import Dropdown from './Dropdown.svelte';
 
-  let { onchange }: { onchange: (modules: ModuleStatus[]) => void } = $props();
+  let {
+    onchange,
+    notif,
+  }: {
+    onchange: (modules: ModuleStatus[]) => void;
+    /** The app's notification center; enables the Notifications settings pane. */
+    notif?: NotificationCenter;
+  } = $props();
 
   let modules = $state<ModuleStatus[]>([]);
   let core = $state<ModuleStatus[]>([]);
+
+  // The Notifications card opens a settings pane the way a Models
+  // provider card opens its setup pane: click the card, get the view.
+  let notifPane = $state(false);
+
+  // Notification-type toggles shown in the pane, with human labels. The
+  // keys are the settings keys, so the switch flips the same field the
+  // bell logic reads.
+  const notifyKinds = [
+    { key: 'approval', desc: 'another session wants to run a tool' },
+    { key: 'question', desc: 'another session is waiting on your answer' },
+    { key: 'turnEnd', desc: 'a turn finishes in any session' },
+    { key: 'error', desc: 'a turn fails in any session' },
+  ] as const;
 
   async function load() {
     const res = await api.modules();
@@ -99,183 +123,338 @@
 </script>
 
 <div class="page">
-  <header>
-    <h1>Modules</h1>
-    <p>
-      Features are modules. Switch off what you don't use; tool changes apply to newly opened
-      sessions. External tools connect as MCP servers, managed below.
-    </p>
-  </header>
+  {#if notifPane && notif}
+    <div class="pane">
+      <button class="back" onclick={() => (notifPane = false)}>
+        <Icon name="back" size={13} /> back
+      </button>
+      <header class="pane-head">
+        <h1>Notifications</h1>
+        <p>
+          What buntline tells you about while it works: approvals and questions from every session,
+          turn ends, and errors. Each browser remembers its own choices here.
+        </p>
+      </header>
 
-  {#if core.length > 0}
-    <section class="core">
-      <h2>Core</h2>
-      <p class="hint">
-        Part of the harness itself: the agent's working surface. Always on, nothing to toggle.
-      </p>
-      <div class="cards">
-        {#each core as m (m.id)}
-          <article class="core-card">
-            <div class="top">
-              <h3>{m.name}</h3>
-              <span class="always">always on</span>
+      <section class="notif-section">
+        <h2>Notifications</h2>
+        <p class="hint">
+          Master switch. Off stops the bell, the attention banner, and desktop popups — the module
+          switch on the card above does the same, app-wide.
+        </p>
+        <div class="notif-row">
+          <div class="notif-text">
+            <span class="notif-name">Notifications</span>
+            <span class="notif-desc">in-app bell, attention banner, and desktop popups</span>
+          </div>
+          <button
+            class="switch"
+            class:on={notif.settings.enabled}
+            role="switch"
+            aria-checked={notif.settings.enabled}
+            aria-label="Notifications {notif.settings.enabled ? 'on' : 'off'}"
+            onclick={() => notif.setSetting('enabled', !notif.settings.enabled)}
+          >
+            <i></i>
+          </button>
+        </div>
+      </section>
+
+      <section class="notif-section">
+        <h2>Desktop popups</h2>
+        <p class="hint">
+          OS-level popups need this site's permission in the browser. Turn them off here any time;
+          the browser keeps the permission, the popups just stop.
+        </p>
+        {#if notif.osAvailable}
+          <div class="notif-row">
+            <div class="notif-text">
+              <span class="notif-name">Desktop popups</span>
+              <span class="notif-desc">
+                {#if notif.osPermission === 'granted'}
+                  permission granted — popups {notif.settings.os ? 'on' : 'off'}
+                {:else if notif.osPermission === 'denied'}
+                  blocked in browser settings
+                {:else}
+                  not enabled yet
+                {/if}
+              </span>
             </div>
-            <p>{m.description}</p>
-            <span class="id">{m.id}</span>
-          </article>
-        {/each}
-      </div>
-    </section>
-  {/if}
-
-  <section class="toggleable">
-    <h2>Features</h2>
-    <p class="hint">
-      Toggleable modules. Disabled modules release their resources and cost nothing until enabled
-      again; tool changes apply to newly opened sessions.
-    </p>
-    <div class="cards">
-      {#each modules as m (m.id)}
-        <article class:off={!m.enabled}>
-          <div class="top">
-            <h3>{m.name}</h3>
             <button
               class="switch"
-              class:on={m.enabled}
+              class:on={notif.settings.os && notif.osPermission === 'granted'}
               role="switch"
-              aria-checked={m.enabled}
-              aria-label="{m.name} {m.enabled ? 'enabled' : 'disabled'}"
-              onclick={() => toggle(m)}
+              aria-checked={notif.settings.os && notif.osPermission === 'granted'}
+              aria-label="Desktop popups"
+              disabled={notif.osPermission !== 'granted'}
+              onclick={() => notif.setSetting('os', !notif.settings.os)}
             >
               <i></i>
             </button>
           </div>
-          <p>{m.description}</p>
-          <span class="id">{m.id}</span>
-        </article>
-      {/each}
-    </div>
-  </section>
+          {#if notif.osPermission === 'default' && notif.canRequest}
+            <button class="small" onclick={() => void notif.requestPermission()}>
+              enable desktop notifications
+            </button>
+          {:else if notif.osPermission === 'denied'}
+            <p class="hint">
+              Allow notifications for this site in the browser's site settings (next to the address
+              bar), then reload.
+            </p>
+          {/if}
+        {:else}
+          <p class="hint">Desktop popups are not available in this browser.</p>
+        {/if}
+      </section>
 
-  {#if mcpEnabled}
-    <section class="mcp">
-      <h2>MCP servers</h2>
-      <p class="hint">
-        Servers added here are stored in mcp.json; entries from config.toml are shown read-only.
-        Tool changes apply to newly opened sessions.
-      </p>
-
-      {#if servers.length > 0}
-        <div class="server-list">
-          {#each servers as srv (srv.name)}
-            <div class="server">
-              <div class="server-main">
-                <span class="server-name">{srv.name}</span>
-                <span class="server-target">
-                  {srv.transport === 'http'
-                    ? srv.url
-                    : [srv.command, ...(srv.args ?? [])].join(' ')}
-                </span>
-                <span
-                  class="server-status"
-                  class:ok={srv.status.startsWith('connected')}
-                  class:bad={srv.status !== '' && !srv.status.startsWith('connected')}
-                >
-                  {srv.status || 'not connected'}
-                </span>
+      <section class="notif-section">
+        <h2>What to notify about</h2>
+        <div class="notif-rows">
+          {#each notifyKinds as k (k.key)}
+            <div class="notif-row">
+              <div class="notif-text">
+                <span class="notif-name">{kindLabel[k.key]}</span>
+                <span class="notif-desc">{k.desc}</span>
               </div>
-              <div class="server-actions">
-                {#if srv.status !== '' && !srv.status.startsWith('connected')}
-                  <button
-                    class="small"
-                    disabled={mcpBusy}
-                    onclick={() => mcpAction(() => api.mcpReconnect(srv.name))}
-                  >
-                    reconnect
-                  </button>
-                {/if}
-                {#if srv.source === 'app'}
-                  {#if confirmRemove === srv.name}
-                    <button
-                      class="small danger"
-                      disabled={mcpBusy}
-                      onclick={() => {
-                        confirmRemove = null;
-                        void mcpAction(() => api.mcpRemoveServer(srv.name));
-                      }}
-                    >
-                      confirm
-                    </button>
-                  {:else}
-                    <button class="small" onclick={() => (confirmRemove = srv.name)}>
-                      remove
-                    </button>
-                  {/if}
-                {:else}
-                  <span class="source">config.toml</span>
-                {/if}
-              </div>
-              {#if srv.env_keys?.length}
-                <div class="server-env">env: {srv.env_keys.join(', ')}</div>
-              {/if}
-              {#if srv.tools.length > 0}
-                <details class="server-tools">
-                  <summary>{srv.tools.length} tools</summary>
-                  <div>{srv.tools.join(', ')}</div>
-                </details>
-              {/if}
+              <button
+                class="switch"
+                class:on={notif.settings[k.key]}
+                role="switch"
+                aria-checked={notif.settings[k.key]}
+                aria-label="Notify about {kindLabel[k.key]}"
+                onclick={() => notif.setSetting(k.key, !notif.settings[k.key])}
+              >
+                <i></i>
+              </button>
             </div>
           {/each}
         </div>
-      {/if}
+      </section>
 
-      <div class="add">
-        <input placeholder="name" bind:value={addName} spellcheck="false" />
-        <Dropdown
-          options={[
-            { value: 'stdio', label: 'stdio' },
-            { value: 'http', label: 'http' },
-          ]}
-          value={addTransport}
-          onselect={(v) => (addTransport = v)}
-          direction="down"
-          title="transport"
-        />
-        <input
-          class="target"
-          placeholder={addTransport === 'http' ? 'https://server/mcp' : 'command --with args'}
-          bind:value={addTarget}
-          spellcheck="false"
-          onkeydown={(e) => e.key === 'Enter' && addServer()}
-        />
-        <button
-          class="small"
-          disabled={mcpBusy || !addName.trim() || !addTarget.trim()}
-          onclick={addServer}
-        >
-          add
-        </button>
+      <section class="notif-section">
+        <h2>When you are looking</h2>
+        <div class="notif-row">
+          <div class="notif-text">
+            <span class="notif-name">While active</span>
+            <span class="notif-desc">
+              notify even when the app is open on the session in question
+            </span>
+          </div>
+          <button
+            class="switch"
+            class:on={notif.settings.whileActive}
+            role="switch"
+            aria-checked={notif.settings.whileActive}
+            aria-label="Notify while active"
+            onclick={() => notif.setSetting('whileActive', !notif.settings.whileActive)}
+          >
+            <i></i>
+          </button>
+        </div>
+      </section>
+    </div>
+  {:else}
+    <header>
+      <h1>Modules</h1>
+      <p>
+        Features are modules. Switch off what you don't use; tool changes apply to newly opened
+        sessions. External tools connect as MCP servers, managed below.
+      </p>
+    </header>
+
+    {#if core.length > 0}
+      <section class="core">
+        <h2>Core</h2>
+        <p class="hint">
+          Part of the harness itself: the agent's working surface. Always on, nothing to toggle.
+        </p>
+        <div class="cards">
+          {#each core as m (m.id)}
+            <article class="core-card">
+              <div class="top">
+                <h3>{m.name}</h3>
+                <span class="always">always on</span>
+              </div>
+              <p>{m.description}</p>
+              <span class="id">{m.id}</span>
+            </article>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    <section class="toggleable">
+      <h2>Features</h2>
+      <p class="hint">
+        Toggleable modules. Disabled modules release their resources and cost nothing until enabled
+        again; tool changes apply to newly opened sessions.
+      </p>
+      <div class="cards">
+        {#each modules as m (m.id)}
+          <!-- The Notifications card is clickable like a Models provider
+             card: it opens the settings pane instead of just toggling.
+             role/tabindex/keydown make it a real button at runtime;
+             the check can't see the conditional role. -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <article
+            class:off={!m.enabled}
+            class:manageable={m.id === 'notifications'}
+            role={m.id === 'notifications' ? 'button' : undefined}
+            tabindex={m.id === 'notifications' ? 0 : undefined}
+            aria-label={m.id === 'notifications' ? 'Open notification settings' : undefined}
+            onclick={m.id === 'notifications' ? () => (notifPane = true) : undefined}
+            onkeydown={m.id === 'notifications'
+              ? (e) => e.key === 'Enter' && (notifPane = true)
+              : undefined}
+          >
+            <div class="top">
+              <h3>{m.name}</h3>
+              <button
+                class="switch"
+                class:on={m.enabled}
+                role="switch"
+                aria-checked={m.enabled}
+                aria-label="{m.name} {m.enabled ? 'enabled' : 'disabled'}"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  toggle(m);
+                }}
+              >
+                <i></i>
+              </button>
+            </div>
+            <p>{m.description}</p>
+            <span class="id">
+              {m.id}
+              {#if m.id === 'notifications'}
+                <span class="manage">settings →</span>
+              {/if}
+            </span>
+          </article>
+        {/each}
       </div>
-      {#if addTransport === 'stdio'}
-        <div class="add env-row">
+    </section>
+
+    {#if mcpEnabled}
+      <section class="mcp">
+        <h2>MCP servers</h2>
+        <p class="hint">
+          Servers added here are stored in mcp.json; entries from config.toml are shown read-only.
+          Tool changes apply to newly opened sessions.
+        </p>
+
+        {#if servers.length > 0}
+          <div class="server-list">
+            {#each servers as srv (srv.name)}
+              <div class="server">
+                <div class="server-main">
+                  <span class="server-name">{srv.name}</span>
+                  <span class="server-target">
+                    {srv.transport === 'http'
+                      ? srv.url
+                      : [srv.command, ...(srv.args ?? [])].join(' ')}
+                  </span>
+                  <span
+                    class="server-status"
+                    class:ok={srv.status.startsWith('connected')}
+                    class:bad={srv.status !== '' && !srv.status.startsWith('connected')}
+                  >
+                    {srv.status || 'not connected'}
+                  </span>
+                </div>
+                <div class="server-actions">
+                  {#if srv.status !== '' && !srv.status.startsWith('connected')}
+                    <button
+                      class="small"
+                      disabled={mcpBusy}
+                      onclick={() => mcpAction(() => api.mcpReconnect(srv.name))}
+                    >
+                      reconnect
+                    </button>
+                  {/if}
+                  {#if srv.source === 'app'}
+                    {#if confirmRemove === srv.name}
+                      <button
+                        class="small danger"
+                        disabled={mcpBusy}
+                        onclick={() => {
+                          confirmRemove = null;
+                          void mcpAction(() => api.mcpRemoveServer(srv.name));
+                        }}
+                      >
+                        confirm
+                      </button>
+                    {:else}
+                      <button class="small" onclick={() => (confirmRemove = srv.name)}>
+                        remove
+                      </button>
+                    {/if}
+                  {:else}
+                    <span class="source">config.toml</span>
+                  {/if}
+                </div>
+                {#if srv.env_keys?.length}
+                  <div class="server-env">env: {srv.env_keys.join(', ')}</div>
+                {/if}
+                {#if srv.tools.length > 0}
+                  <details class="server-tools">
+                    <summary>{srv.tools.length} tools</summary>
+                    <div>{srv.tools.join(', ')}</div>
+                  </details>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <div class="add">
+          <input placeholder="name" bind:value={addName} spellcheck="false" />
+          <Dropdown
+            options={[
+              { value: 'stdio', label: 'stdio' },
+              { value: 'http', label: 'http' },
+            ]}
+            value={addTransport}
+            onselect={(v) => (addTransport = v)}
+            direction="down"
+            title="transport"
+          />
           <input
             class="target"
-            placeholder={'environment (optional): TOKEN=${secret:NAME}, OTHER=${VAR}'}
-            bind:value={addEnv}
+            placeholder={addTransport === 'http' ? 'https://server/mcp' : 'command --with args'}
+            bind:value={addTarget}
             spellcheck="false"
             onkeydown={(e) => e.key === 'Enter' && addServer()}
           />
+          <button
+            class="small"
+            disabled={mcpBusy || !addName.trim() || !addTarget.trim()}
+            onclick={addServer}
+          >
+            add
+          </button>
         </div>
-        <p class="hint env-hint">
-          Reference API keys as {'${secret:NAME}'} (stored under API keys on the models page) or
-          {'${VAR}'} from the environment. Values resolve when the server starts and stay out of the config
-          file.
-        </p>
-      {/if}
-      {#if mcpError}
-        <div class="mcp-error">{mcpError}</div>
-      {/if}
-    </section>
+        {#if addTransport === 'stdio'}
+          <div class="add env-row">
+            <input
+              class="target"
+              placeholder={'environment (optional): TOKEN=${secret:NAME}, OTHER=${VAR}'}
+              bind:value={addEnv}
+              spellcheck="false"
+              onkeydown={(e) => e.key === 'Enter' && addServer()}
+            />
+          </div>
+          <p class="hint env-hint">
+            Reference API keys as {'${secret:NAME}'} (stored under API keys on the models page) or
+            {'${VAR}'} from the environment. Values resolve when the server starts and stay out of the
+            config file.
+          </p>
+        {/if}
+        {#if mcpError}
+          <div class="mcp-error">{mcpError}</div>
+        {/if}
+      </section>
+    {/if}
   {/if}
 </div>
 
@@ -385,6 +564,32 @@
     font-size: 10.5px;
     color: var(--text-muted);
     opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  /* The Notifications card is also a button: hovering hints the click,
+     like the provider cards on the Models page. */
+  article.manageable {
+    cursor: pointer;
+  }
+  article.manageable:hover {
+    border-color: var(--accent);
+  }
+  article.manageable:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .manage {
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 1;
+    white-space: nowrap;
   }
   .switch {
     position: relative;
@@ -415,6 +620,104 @@
   .switch.on i {
     transform: translateX(14px);
     background: var(--accent-contrast);
+  }
+  .switch:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* --- Notifications settings pane (the card opens it) --- */
+  .pane {
+    max-width: 640px;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0 12px;
+  }
+  .back:hover {
+    color: var(--text-strong);
+  }
+  .pane-head {
+    margin-bottom: 6px;
+  }
+  .pane-head h1 {
+    font-size: 16px;
+    font-weight: 650;
+    color: var(--text-strong);
+    margin: 0 0 6px;
+  }
+  .pane-head p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .notif-section {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .notif-section h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-strong);
+    margin: 0 0 4px;
+  }
+  .notif-section > .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    line-height: 1.5;
+  }
+  .notif-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .notif-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 10px 14px;
+  }
+  .notif-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .notif-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-strong);
+    text-transform: capitalize;
+  }
+  .notif-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .pane .small {
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 5px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+  }
+  .pane .small:hover {
+    background: var(--surface-2);
   }
 
   .mcp {

@@ -20,7 +20,8 @@ loop (tools, permissions, sessions) and serves a browser UI on localhost.
 - **Notifications**: approvals, questions, turn ends, and errors from
   *any* session raise an in-app bell and OS-level popups while the UI is
   open — on desktop and mobile (install the app to the home screen on
-  iOS for native notifications). See [docs/linux.md](docs/linux.md).
+  iOS for native notifications). Per-type settings live under **Modules →
+  Notifications**. See [docs/linux.md](docs/linux.md).
 - **Sessions** persist as plain JSONL under
   `~/.local/share/buntline/sessions/`. Resume from the sidebar.
 - **`/compact`** summarizes and resets the transcript explicitly, because

@@ -142,3 +142,14 @@ type ApprovalRequest struct {
 type Approver interface {
 	RequestApproval(ctx context.Context, req ApprovalRequest) (Decision, error)
 }
+
+// ApprovalAnnouncer is implemented by approvers that announce their own
+// approval_request events. The browser approver announces exactly when it
+// decides a human is needed; calls it auto-resolves (session approval
+// modes, durable allowlists) are never announced, so the notification
+// bell and attention banner don't fire for approvals that never reach a
+// human. Approvers without this method keep the agent's default: every
+// request is announced before the decision round-trip.
+type ApprovalAnnouncer interface {
+	AnnounceApproval(req ApprovalRequest)
+}

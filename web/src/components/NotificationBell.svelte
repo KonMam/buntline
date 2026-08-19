@@ -1,7 +1,9 @@
 <script lang="ts">
-  // The bell: unread count badge, the in-app notification list, the OS
-  // permission state, and per-type settings. One instance, owned by the
-  // app, fed by the global /api/events stream.
+  // The bell: unread count badge and the in-app notification list. One
+  // instance, owned by the app, fed by the global /api/events stream.
+  // Settings are deliberately NOT here — per-type toggles, the master
+  // switch, and desktop popups live on the Notifications module view
+  // (modules → notifications), so the bell stays a list.
   import type { NotificationCenter } from '../lib/notifications.svelte';
   import { kindLabel } from '../lib/notifications.svelte';
   import Icon from './Icon.svelte';
@@ -57,15 +59,6 @@
     <div class="popover">
       <header>
         <span class="title">notifications</span>
-        {#if center.osAvailable && center.osPermission === 'default' && center.canRequest}
-          <button class="perm" onclick={() => void center.requestPermission()}>
-            enable desktop notifications
-          </button>
-        {:else if center.osAvailable && center.osPermission === 'denied'}
-          <span class="denied">desktop notifications blocked</span>
-        {:else if center.osAvailable && center.osPermission === 'granted'}
-          <span class="granted">desktop notifications on</span>
-        {/if}
       </header>
 
       <div class="list">
@@ -93,62 +86,7 @@
         {/if}
       </div>
 
-      <footer>
-        <label class="switch">
-          <input
-            type="checkbox"
-            checked={center.settings.enabled}
-            onchange={(e) => center.setSetting('enabled', e.currentTarget.checked)}
-          />
-          <span>notifications</span>
-        </label>
-        {#if center.settings.enabled}
-          <div class="toggles">
-            <label class="switch">
-              <input
-                type="checkbox"
-                checked={center.settings.approval}
-                onchange={(e) => center.setSetting('approval', e.currentTarget.checked)}
-              />
-              <span>approvals</span>
-            </label>
-            <label class="switch">
-              <input
-                type="checkbox"
-                checked={center.settings.question}
-                onchange={(e) => center.setSetting('question', e.currentTarget.checked)}
-              />
-              <span>questions</span>
-            </label>
-            <label class="switch">
-              <input
-                type="checkbox"
-                checked={center.settings.turnEnd}
-                onchange={(e) => center.setSetting('turnEnd', e.currentTarget.checked)}
-              />
-              <span>turn ends</span>
-            </label>
-            <label class="switch">
-              <input
-                type="checkbox"
-                checked={center.settings.error}
-                onchange={(e) => center.setSetting('error', e.currentTarget.checked)}
-              />
-              <span>errors</span>
-            </label>
-            {#if center.osAvailable}
-              <label class="switch">
-                <input
-                  type="checkbox"
-                  checked={center.settings.os}
-                  onchange={(e) => center.setSetting('os', e.currentTarget.checked)}
-                />
-                <span>desktop popups</span>
-              </label>
-            {/if}
-          </div>
-        {/if}
-      </footer>
+      <footer class="hint">settings live under modules → notifications</footer>
     </div>
   {/if}
 </div>
@@ -175,6 +113,12 @@
     line-height: 15px;
     text-align: center;
   }
+  /* A solid background is the whole layering story: every other floating
+     layer in the app (dropdowns, the session switcher) paints on --bg,
+     and a translucent surface here would let the chat thread show
+     through the list and read as the popover "mixed up" with the chat
+     window. The z-index keeps it above the drawers, overlays, and the
+     attention banner. */
   .popover {
     position: absolute;
     top: calc(100% + 8px);
@@ -183,7 +127,7 @@
     max-height: 70vh;
     display: flex;
     flex-direction: column;
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border-strong);
     border-radius: 10px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
@@ -203,24 +147,6 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-muted);
-  }
-  .perm {
-    font-size: 11px;
-    color: var(--accent);
-    border: 1px solid var(--accent-soft);
-    border-radius: 6px;
-    padding: 3px 8px;
-  }
-  .perm:hover {
-    background: var(--accent-soft);
-  }
-  .granted {
-    font-size: 10.5px;
-    color: var(--ok);
-  }
-  .denied {
-    font-size: 10.5px;
-    color: var(--danger);
   }
   .list {
     flex: 1;
@@ -289,29 +215,11 @@
     color: var(--text-muted);
     font-size: 12.5px;
   }
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 8px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .toggles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-  }
-  .switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
+  footer.hint {
+    padding: 7px 12px;
+    font-size: 11px;
     color: var(--text-muted);
-    cursor: pointer;
-    user-select: none;
-  }
-  .switch input {
-    accent-color: var(--accent);
-    margin: 0;
+    opacity: 0.75;
+    border-top: 1px solid var(--border);
   }
 </style>

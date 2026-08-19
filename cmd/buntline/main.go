@@ -29,6 +29,7 @@ import (
 	"github.com/KonMam/buntline/internal/module/hooks"
 	"github.com/KonMam/buntline/internal/module/mcpclient"
 	"github.com/KonMam/buntline/internal/module/memory"
+	"github.com/KonMam/buntline/internal/module/notifications"
 	"github.com/KonMam/buntline/internal/module/ollama"
 	"github.com/KonMam/buntline/internal/module/search"
 	"github.com/KonMam/buntline/internal/module/subagents"
@@ -157,6 +158,7 @@ func runServer(cfg config.Config, open bool) error {
 		ollama.New(cfg.BaseURL),
 		&webfetch.Module{},
 		&commands.Module{Lookup: lookup},
+		&notifications.Module{},
 		&memory.Module{},
 		&subagents.Module{},
 		&hooks.Module{},

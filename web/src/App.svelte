@@ -132,6 +132,7 @@
   const tasksEnabled = $derived(enabled('tasks'));
   const memoryEnabled = $derived(enabled('memory'));
   const mcpEnabled = $derived(enabled('mcp'));
+  const notificationsEnabled = $derived(enabled('notifications'));
 
   async function refreshSessions() {
     sessions = await api.listSessions();
@@ -211,9 +212,6 @@
     const res = await api.modules();
     modules = res.modules;
     await refreshSessions();
-    // The notification stream runs for the life of the app: it needs no
-    // session to be selected (other-session events are its whole point).
-    notif.start();
     if (!configured) {
       view = 'models';
       return;
@@ -223,6 +221,15 @@
     } else {
       showPicker = true;
     }
+  });
+
+  // The notification stream follows the module toggle: disabled modules
+  // must cost nothing, so no EventSource, no bell, no attention banner.
+  // Before the module list loads, notificationsEnabled is false and the
+  // effect's stop() is a safe no-op; once the list arrives it starts.
+  $effect(() => {
+    if (notificationsEnabled) notif.start();
+    else notif.stop();
   });
 
   // Once setup completes, entering the chat with no sessions opens the
@@ -304,6 +311,7 @@
       {filesEnabled}
       {mcpEnabled}
       {notif}
+      {notificationsEnabled}
       onnotifyopen={(id) => void select(id)}
       onfork={forkFrom}
       onedit={editFrom}
@@ -321,13 +329,13 @@
       {@render panelPane()}
     {/if}
   {:else if view === 'modules'}
-    <ModulesPage onchange={(m) => (modules = m)} />
+    <ModulesPage onchange={(m) => (modules = m)} {notif} />
   {:else if view === 'models'}
     <ModelsPage {session} {ollamaEnabled} {configured} onconfigured={refreshConfigured} />
   {/if}
 </div>
 
-{#if notif.attention}
+{#if notif.attention && notificationsEnabled}
   {@const attention = notif.attention}
   <button class="attention" onclick={() => select(attention.sessionId)}>
     <Icon name="bell" size={13} />

@@ -267,6 +267,11 @@ export class NotificationCenter {
   start() {
     if (this.#started) return;
     this.#started = true;
+    // A stop() clears the channel; recreate it so a disable→enable cycle
+    // keeps multi-tab leader election working.
+    if (!this.#channel && typeof BroadcastChannel !== 'undefined') {
+      this.#channel = new BroadcastChannel('buntline-notifications');
+    }
     if (this.#channel) {
       this.#channel.onmessage = (e) => this.#onChannel(e);
       this.#channel.postMessage({ type: 'hello', id: this.#tabId });

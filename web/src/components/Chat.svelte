@@ -23,6 +23,7 @@
     filesEnabled,
     mcpEnabled,
     notif,
+    notificationsEnabled = true,
     onnotifyopen,
     onfork,
     onedit,
@@ -35,6 +36,8 @@
     filesEnabled: boolean;
     mcpEnabled: boolean;
     notif?: NotificationCenter;
+    /** The notifications module toggle; off hides the bell entirely. */
+    notificationsEnabled?: boolean;
     onnotifyopen?: (id: string) => void;
     onfork?: (index: number) => void;
     onedit?: (index: number) => void;
@@ -168,7 +171,7 @@
       >
         prompt
       </button>
-      {#if notif}
+      {#if notif && notificationsEnabled}
         <NotificationBell center={notif} onopen={(id) => onnotifyopen?.(id)} />
       {/if}
       {#if session.meta}
