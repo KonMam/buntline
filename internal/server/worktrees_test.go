@@ -65,7 +65,10 @@ func TestCreateSessionInWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := New(emptyConfig(), store, nil, reg, nil)
+	// Session creation refuses when no model resolves; give the config one.
+	cfg := emptyConfig()
+	cfg.Model = "test-model"
+	s := New(cfg, store, nil, reg, nil)
 	t.Cleanup(s.Shutdown)
 
 	body := bytes.NewReader([]byte(`{"worktree":` + jsonQuote(repo) + `,"worktree_name":"feature-x"}`))

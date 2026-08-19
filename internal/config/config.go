@@ -129,14 +129,20 @@ func (c Config) ResolvedProfiles() []Profile {
 			return c.Profiles
 		}
 	}
-	def := Profile{Name: "default", BaseURL: c.BaseURL, Model: c.Model, APIKey: c.APIKey}
-	// A hosted endpoint with no key cannot serve anything; flag it so the
-	// UI says "key missing" instead of probing and surfacing 401s.
-	def.KeyMissing = c.APIKey == "" && !LocalBaseURL(c.BaseURL)
 	apps := LoadProviders()
 	removed := map[string]bool{}
 	appNames := map[string]bool{}
-	out := []Profile{def}
+	out := []Profile{} // never nil: served as JSON, and the UI expects an array
+	// The synthetic "default" profile only exists when the user actually
+	// configured a top-level endpoint; with nothing configured there is no
+	// default to offer, and the UI must say so instead of listing one.
+	if c.BaseURL != "" {
+		def := Profile{Name: "default", BaseURL: c.BaseURL, Model: c.Model, APIKey: c.APIKey}
+		// A hosted endpoint with no key cannot serve anything; flag it so the
+		// UI says "key missing" instead of probing and surfacing 401s.
+		def.KeyMissing = c.APIKey == "" && !LocalBaseURL(c.BaseURL)
+		out = append(out, def)
+	}
 	for _, ap := range apps {
 		if ap.Removed {
 			removed[ap.Name] = true
@@ -154,15 +160,34 @@ func (c Config) ResolvedProfiles() []Profile {
 	return out
 }
 
+// Defaults deliberately carries no provider: a baked-in endpoint turns
+// "not configured" into a silent misroute (a session whose profile fails
+// to resolve would quietly talk to a guessed localhost server instead of
+// erroring). No provider means the UI runs first-run setup and every
+// unresolved profile fails loudly.
 func Defaults() Config {
 	home, _ := os.UserHomeDir()
 	return Config{
-		BaseURL:     "http://localhost:11434/v1",
-		Model:       "qwen3.5:9b",
 		Addr:        "localhost:7433",
 		SessionsDir: filepath.Join(home, ".local", "share", "buntline", "sessions"),
 		DataDir:     filepath.Join(home, ".local", "share", "buntline"),
 	}
+}
+
+// Configured reports whether any usable provider exists: an explicit
+// top-level endpoint (config file, env, or flags), a config.toml profile,
+// or a model added through the UI. The UI gates the chat behind setup
+// until this is true.
+func (c Config) Configured() bool {
+	if c.BaseURL != "" || len(c.Profiles) > 0 {
+		return true
+	}
+	for _, p := range LoadProviders() {
+		if !p.Removed && p.Model != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // Load layers config files and env vars over defaults. Flag overrides are

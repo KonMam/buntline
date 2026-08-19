@@ -31,6 +31,12 @@ type Module struct {
 }
 
 func New(baseURL string) *Module {
+	// This module manages the local Ollama server specifically, so its
+	// standard endpoint is this module's own default; config no longer
+	// carries a baked-in provider URL to inherit.
+	if baseURL == "" {
+		baseURL = "http://localhost:11434/v1"
+	}
 	return &Module{BaseURL: baseURL, Client: &http.Client{Timeout: 30 * time.Second}}
 }
 

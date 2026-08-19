@@ -293,23 +293,39 @@ func (s *Server) windowFor(profileName, model string) int {
 // endpoint is constructed text-only, because the OpenAI-compatible API
 // does not advertise vision and most backends (DeepSeek included) reject
 // image parts outright.
-func (s *Server) providerFor(meta *session.Meta) provider.Provider {
+// An unresolvable profile is an error, never a fallback: silently
+// substituting another endpoint sends the conversation to the wrong
+// backend (the exact failure the old hardcoded default caused after the
+// rebrand orphaned providers.json).
+func (s *Server) providerFor(meta *session.Meta) (provider.Provider, error) {
 	for _, p := range s.cfg.ResolvedProfiles() {
-		if p.Name == meta.Profile {
+		if p.Name == meta.Profile || (meta.Profile == "" && p.Name == "default") {
 			key := p.APIKey
 			if key == "" && p.KeyRef != "" {
 				key = secrets.Get(p.KeyRef)
 			}
 			if isOllamaEndpoint(p.BaseURL) {
-				return provider.NewOpenAICompatVision(p.BaseURL, key)
+				return provider.NewOpenAICompatVision(p.BaseURL, key), nil
 			}
-			return provider.NewOpenAICompat(p.BaseURL, key)
+			return provider.NewOpenAICompat(p.BaseURL, key), nil
 		}
 	}
-	if isOllamaEndpoint(s.cfg.BaseURL) {
-		return provider.NewOpenAICompatVision(s.cfg.BaseURL, s.cfg.APIKey)
+	if meta.Profile != "" {
+		return nil, fmt.Errorf("this session's model profile %q is not configured; add it in the Models view or switch the session's model", meta.Profile)
 	}
-	return provider.NewOpenAICompat(s.cfg.BaseURL, s.cfg.APIKey)
+	return nil, fmt.Errorf("no model is configured; add one in the Models view")
+}
+
+// errProvider stands in when a session's profile cannot be resolved: the
+// session still opens (so the user can switch its model or read the
+// transcript), but any turn fails immediately with the resolution error
+// instead of dialing a guessed endpoint.
+type errProvider struct{ err error }
+
+func (e errProvider) Name() string         { return "unconfigured" }
+func (e errProvider) SupportsImages() bool { return false }
+func (e errProvider) Stream(context.Context, provider.Request) (<-chan provider.Event, error) {
+	return nil, e.err
 }
 
 // isOllamaEndpoint recognizes Ollama's OpenAI-compat adapter by its host.
@@ -445,7 +461,12 @@ func (s *Server) attach(id string) (*liveSession, error) {
 	}
 	systemPrompt := sessionPrompt(config.SystemPrompt(workdir), meta.Mode)
 	ws := config.LoadWorkdirSettings(workdir)
-	prov := s.providerFor(meta)
+	// An unresolvable profile must not block attach: the session opens so
+	// the user can read it and switch its model; only running a turn fails.
+	prov, provErr := s.providerFor(meta)
+	if provErr != nil {
+		prov = errProvider{provErr}
+	}
 	registry := tools.NewRegistry()
 	var interceptors []agent.ToolInterceptor
 	var observers []func(agent.Event)
@@ -689,11 +710,14 @@ func (s *Server) persistEvent(sessionID string, ev agent.Event) {
 // --- handlers ---
 
 func (s *Server) handleConfig(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, map[string]string{
-		"model":    s.cfg.Model,
-		"base_url": s.cfg.BaseURL,
-		"workdir":  s.cfg.Workdir,
-		"version":  s.cfg.Version,
+	// configured is computed per request, not at startup: adding the first
+	// model through the UI must flip it without a restart.
+	writeJSON(w, map[string]any{
+		"model":      s.cfg.Model,
+		"base_url":   s.cfg.BaseURL,
+		"workdir":    s.cfg.Workdir,
+		"version":    s.cfg.Version,
+		"configured": s.cfg.Configured(),
 	})
 }
 
@@ -815,6 +839,14 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// With no baked-in default, an unconfigured install reaches here with
+	// no model at all; refuse loudly instead of creating a session that
+	// cannot run a turn.
+	if model == "" {
+		httpError(w, http.StatusBadRequest, fmt.Errorf("no model is configured; add one in the Models view"))
+		return
+	}
+
 	meta, err := s.store.Create(model, workdir)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, err)
@@ -878,12 +910,24 @@ func (s *Server) handleSetModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if in.Profile != "" && in.Profile != meta.Profile {
+	// Rebuild the provider even when the profile name is unchanged: the
+	// profile's endpoint or key may have been fixed since the session
+	// attached, and re-picking it in the UI is exactly how a user asks
+	// for the repair to take effect.
+	if in.Profile != "" {
+		prev := meta.Profile
 		meta.Profile = in.Profile
 		if in.Profile == "default" {
 			meta.Profile = ""
 		}
-		if err := ls.agent.SetProvider(s.providerFor(meta)); err != nil {
+		prov, err := s.providerFor(meta)
+		if err != nil {
+			meta.Profile = prev
+			httpError(w, http.StatusBadRequest, err)
+			return
+		}
+		if err := ls.agent.SetProvider(prov); err != nil {
+			meta.Profile = prev
 			httpError(w, http.StatusConflict, err)
 			return
 		}
@@ -965,13 +1009,18 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	meta, err := s.store.GetMeta(id)
+	if err != nil {
+		httpError(w, http.StatusNotFound, err)
+		return
+	}
 	if len(in.Images) > 0 {
-		meta, err := s.store.GetMeta(id)
-		if err != nil {
-			httpError(w, http.StatusNotFound, err)
+		prov, provErr := s.providerFor(meta)
+		if provErr != nil {
+			httpError(w, http.StatusConflict, provErr)
 			return
 		}
-		if !s.providerFor(meta).SupportsImages() {
+		if !prov.SupportsImages() {
 			content, err := s.describeImages(r.Context(), meta.Model, in.Images, in.Content)
 			if err != nil {
 				httpError(w, http.StatusBadRequest, err)
@@ -1007,6 +1056,20 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]bool{"queued": true})
 		return
 	}
+
+	// Re-resolve the provider for every fresh turn: a profile fixed or a
+	// key added since attach must heal the live session immediately, not
+	// after a restart (the same live-read rule subagents follow).
+	prov, provErr := s.providerFor(meta)
+	if provErr != nil {
+		httpError(w, http.StatusConflict, provErr)
+		return
+	}
+	if err := ls.agent.SetProvider(prov); err == nil {
+		ls.contextWindow.Store(int64(s.windowFor(meta.Profile, meta.Model)))
+	}
+	// A SetProvider ErrBusy means another sender won the race; their turn
+	// owns the provider and RunMessages below will yield to it.
 
 	msgs := append([]provider.Message{msg}, attachmentExchange(ls.workdir, in.Attachments)...)
 
@@ -1163,7 +1226,11 @@ func (s *Server) generateTitle(meta *session.Meta, firstMessage string) string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	events, err := s.providerFor(meta).Stream(ctx, provider.Request{
+	prov, provErr := s.providerFor(meta)
+	if provErr != nil {
+		return ""
+	}
+	events, err := prov.Stream(ctx, provider.Request{
 		Model: meta.Model,
 		Messages: []provider.Message{{
 			Role: provider.RoleUser,

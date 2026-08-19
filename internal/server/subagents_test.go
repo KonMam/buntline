@@ -38,6 +38,17 @@ func emptyConfig() config.Config {
 	return config.Config{AllowedHosts: []string{"example.com"}}
 }
 
+// textOnlyProfileConfig defines the "deepseek" profile tests pin on
+// sessions. Profiles no longer fall back to a default endpoint, so a
+// session naming a profile needs it defined. The address is hosted-shaped
+// (non-loopback-name, so it classifies text-only) but unroutable: no test
+// traffic ever leaves the machine.
+func textOnlyProfileConfig() config.Config {
+	c := emptyConfig()
+	c.Profiles = []config.Profile{{Name: "deepseek", BaseURL: "http://127.0.0.2:1/v1", Model: "test-model"}}
+	return c
+}
+
 // startSession creates and resolves a session so the liveSession (and its
 // subagent registry) exists.
 func startSession(t *testing.T, s *Server, store *session.Store) (*liveSession, string) {
@@ -456,7 +467,12 @@ func TestSubagentSteerInterruptEndpoints(t *testing.T) {
 // gate: a session whose provider does not accept image parts must get a
 // clear 400 before any turn starts, and the transcript stays untouched.
 func TestSendMessageRejectsImagesOnTextOnlyProvider(t *testing.T) {
-	s, store := newTestServer(t)
+	store, err := session.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(textOnlyProfileConfig(), store, nil, nil, nil)
+	t.Cleanup(s.Shutdown)
 	meta, err := store.Create("test-model", t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -556,15 +572,24 @@ func TestProviderForOllamaVision(t *testing.T) {
 		{"ipv6 loopback", "http://[::1]:11434/v1", true},
 		{"deepseek", "https://api.deepseek.com/v1", false},
 		{"remote ollama host", "http://192.168.1.5:11434/v1", false},
-		{"empty", "", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s := &Server{cfg: config.Config{BaseURL: c.url}}
 			meta := &session.Meta{Model: "m", Profile: ""}
-			if got := s.providerFor(meta).SupportsImages(); got != c.want {
+			prov, err := s.providerFor(meta)
+			if err != nil {
+				t.Fatalf("providerFor(%q) error: %v", c.url, err)
+			}
+			if got := prov.SupportsImages(); got != c.want {
 				t.Errorf("SupportsImages(%q) = %v, want %v", c.url, got, c.want)
 			}
 		})
+	}
+	// An empty base URL is no longer a text-only provider; it is an error
+	// (nothing is configured), so no image support question arises at all.
+	s := &Server{cfg: config.Config{}}
+	if _, err := s.providerFor(&session.Meta{Model: "m"}); err == nil {
+		t.Fatal("providerFor with nothing configured should error")
 	}
 }

@@ -37,6 +37,7 @@ import (
 	"github.com/KonMam/buntline/internal/module/webfetch"
 	"github.com/KonMam/buntline/internal/module/worktrees"
 	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/secrets"
 	"github.com/KonMam/buntline/internal/server"
 	"github.com/KonMam/buntline/internal/session"
 	"github.com/KonMam/buntline/internal/tools"
@@ -55,6 +56,11 @@ func main() {
 }
 
 func run() error {
+	// One-time rename of pre-rebrand tether directories, before anything
+	// reads config, so an upgrade keeps its providers, keys, and sessions.
+	for _, move := range config.MigrateLegacyDirs() {
+		fmt.Fprintln(os.Stderr, "buntline: migrated", move)
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -116,6 +122,23 @@ func run() error {
 	}
 
 	if *prompt != "" {
+		// Headless has no setup UI: with no explicit endpoint, fall back to
+		// the app-managed default (the model starred in the Models view),
+		// resolving its key like the server does: env first, then the
+		// secrets store. Nothing resolved is a hard error, never a guess.
+		if cfg.BaseURL == "" {
+			prof, ok := config.AppDefaultProfile()
+			if !ok {
+				return fmt.Errorf("no model is configured: start the UI once to set one up, or pass -base-url and -model")
+			}
+			cfg.BaseURL, cfg.APIKey = prof.BaseURL, prof.APIKey
+			if cfg.APIKey == "" && prof.KeyRef != "" {
+				cfg.APIKey = secrets.Get(prof.KeyRef)
+			}
+			if cfg.Model == "" {
+				cfg.Model = prof.Model
+			}
+		}
 		prov := provider.NewOpenAICompat(cfg.BaseURL, cfg.APIKey)
 		return runHeadless(cfg, prov, *prompt, *autoApprove)
 	}

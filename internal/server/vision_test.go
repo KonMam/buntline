@@ -49,7 +49,7 @@ func newVisionTestServer(t *testing.T, vm *fakeVisionModule) (*Server, *session.
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := New(emptyConfig(), store, nil, reg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s := New(textOnlyProfileConfig(), store, nil, reg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	t.Cleanup(s.Shutdown)
 	meta, err := store.Create("test-model", t.TempDir())
 	if err != nil {

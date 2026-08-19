@@ -115,6 +115,8 @@ export interface ServerConfig {
   base_url: string;
   workdir: string;
   version: string;
+  /** False until any provider exists; the app gates chat behind setup. */
+  configured: boolean;
 }
 
 export interface PendingApproval {

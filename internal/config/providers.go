@@ -305,14 +305,55 @@ func LoadProviders() []AppProvider {
 
 // DefaultAppProvider returns the app-managed provider marked as the
 // default for new sessions, with its model. The marker lives in
-// providers.json (app-owned), never in a user-edited file.
+// providers.json (app-owned), never in a user-edited file. With no
+// explicit default, a sole added model stands in: it is unambiguous, and
+// a fresh install's first model must open the chat without also
+// requiring the star (the explicit default still governs the moment a
+// second model exists).
 func DefaultAppProvider() (name, model string, ok bool) {
-	for _, p := range LoadProviders() {
-		if p.Default && p.Model != "" {
+	ps := LoadProviders()
+	for _, p := range ps {
+		if p.Default && !p.Removed && p.Model != "" {
 			return p.Name, p.Model, true
 		}
 	}
+	if p, ok := soleProvider(ps); ok {
+		return p.Name, p.Model, true
+	}
 	return "", "", false
+}
+
+// soleProvider returns the only non-removed added model, if there is
+// exactly one.
+func soleProvider(ps []AppProvider) (AppProvider, bool) {
+	var found AppProvider
+	n := 0
+	for _, p := range ps {
+		if !p.Removed && p.Model != "" {
+			found = p
+			n++
+		}
+	}
+	return found, n == 1
+}
+
+// AppDefaultProfile resolves the app-managed default (provider, model)
+// into a full Profile, for consumers outside the server (headless mode)
+// that need an endpoint when no explicit config exists. The APIKey holds
+// only what the environment supplies; callers fall back to the secrets
+// store via KeyRef, exactly like the server does at request time.
+func AppDefaultProfile() (Profile, bool) {
+	ps := LoadProviders()
+	for _, p := range ps {
+		if p.Default && !p.Removed && p.Model != "" {
+			return resolveProvider(p), true
+		}
+	}
+	// Same sole-model fallback as DefaultAppProvider.
+	if p, ok := soleProvider(ps); ok {
+		return resolveProvider(p), true
+	}
+	return Profile{}, false
 }
 
 // SaveProviders persists app-managed providers atomically.

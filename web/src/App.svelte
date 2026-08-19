@@ -187,13 +187,39 @@
     if (!session.meta && sessions.length > 0) await select(sessions[0].id);
   }
 
+  // First-run gate: until a provider exists there is nothing a session
+  // could talk to, so the app opens on Models instead of the chat and
+  // the folder picker stays closed. Adding a model flips the flag live.
+  // null = not fetched yet, so the picker effect below cannot fire early.
+  let configured = $state<boolean | null>(null);
+  async function refreshConfigured() {
+    try {
+      configured = (await api.config()).configured;
+    } catch {
+      // unreachable server; the chat surfaces its own errors
+    }
+  }
+
   onMount(async () => {
+    await refreshConfigured();
     const res = await api.modules();
     modules = res.modules;
     await refreshSessions();
+    if (!configured) {
+      view = 'models';
+      return;
+    }
     if (sessions.length > 0) {
       await select(sessions[0].id);
     } else {
+      showPicker = true;
+    }
+  });
+
+  // Once setup completes, entering the chat with no sessions opens the
+  // folder picker, the same landing a configured install gets.
+  $effect(() => {
+    if (configured === true && view === 'chat' && sessions.length === 0 && !session.meta) {
       showPicker = true;
     }
   });
@@ -286,7 +312,7 @@
   {:else if view === 'modules'}
     <ModulesPage onchange={(m) => (modules = m)} />
   {:else if view === 'models'}
-    <ModelsPage {session} {ollamaEnabled} />
+    <ModelsPage {session} {ollamaEnabled} {configured} onconfigured={refreshConfigured} />
   {/if}
 </div>
 

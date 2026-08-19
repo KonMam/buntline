@@ -9,9 +9,15 @@
   let {
     session,
     ollamaEnabled,
+    configured = true,
+    onconfigured,
   }: {
     session: SessionState;
     ollamaEnabled: boolean;
+    /** False on a fresh install: the page runs as first-run setup. */
+    configured?: boolean | null;
+    /** Called when setup state may have changed (a model was added). */
+    onconfigured?: () => void;
   } = $props();
 
   // --- providers (catalog + app-managed) ---
@@ -56,6 +62,10 @@
   const needsKey = $derived(!isLocal && !!setupProvider?.env);
   const keyPresent = $derived(!!setupProvider && !setupProvider.key_missing);
   const isOllamaPane = $derived(setupName === 'ollama');
+  // A local provider whose server is not answering: adding a model would
+  // only defer the failure to the first chat turn, so the pane says so
+  // and blocks Add until the server is up.
+  const localOffline = $derived(isLocal && setupProvider?.available === false);
 
   // Models added for this provider (from providers.json). A provider can
   // hold several; each card shows its own state.
@@ -141,11 +151,16 @@
       await api.setSecret(p.env, keyValue);
       keyValue = '';
       await refreshProviders();
-      // Live models only for providers that need them (no curated list).
-      if (shouldListLive(p)) {
-        await loadSetupModels(p);
+      // Validate the key with a real call: listing the provider's models
+      // costs nothing and turns a bad paste into an immediate error here
+      // instead of a 401 on the first chat turn.
+      try {
+        const names = await api.providerModels(p.name);
+        if (shouldListLive(p)) setupModels = names;
+        paneMsg = 'key saved · verified';
+      } catch (e) {
+        keyError = `key saved, but the provider rejected it: ${e instanceof Error ? e.message : String(e)}`;
       }
-      paneMsg = 'key saved';
       return true;
     } catch (e) {
       keyError = e instanceof Error ? e.message : String(e);
@@ -275,7 +290,7 @@
   async function addModel() {
     const p = setupProvider;
     const model = chosenModel || setupCustomModel.trim();
-    if (!p || !model || saving) return;
+    if (!p || !model || saving || localOffline) return;
     saving = true;
     paneMsg = null;
     try {
@@ -295,6 +310,8 @@
         await session.setModel(model, p.name);
       }
       paneMsg = `added ${model}`;
+      // The first added model completes setup; tell the app to re-check.
+      onconfigured?.();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -329,6 +346,8 @@
       await refreshProviders();
       if (chosenModel === name) chosenModel = null;
       paneMsg = 'removed';
+      // Removing the last model can un-configure the app; re-check.
+      onconfigured?.();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -360,6 +379,12 @@
 </script>
 
 <div class="page">
+  {#if configured === false}
+    <div class="first-run">
+      <strong>Welcome.</strong> Pick a provider below, add its API key (or start your local server), then
+      add a model. The chat unlocks once a model is set up.
+    </div>
+  {/if}
   {#if setupName}
     <!-- one unified pane for every provider -->
     <div class="pane">
@@ -393,6 +418,26 @@
             </div>
           {/if}
           {#if keyError}<div class="error">{keyError}</div>{/if}
+        </div>
+      {/if}
+
+      <!-- local server health: adding a model to a dead server helps no one -->
+      {#if localOffline}
+        <div class="offline-note">
+          <span class="error-text">
+            Not answering at {setupProvider?.base_url}. Start the server, then retry.
+          </span>
+          <button
+            class="link-btn"
+            onclick={async () => {
+              await refreshProviders();
+              if (setupProvider && shouldListLive(setupProvider)) {
+                await loadSetupModels(setupProvider);
+              }
+            }}
+          >
+            retry
+          </button>
         </div>
       {/if}
 
@@ -513,7 +558,8 @@
         <button
           class="btn-primary add-btn"
           onclick={addModel}
-          disabled={(!chosenModel && !setupCustomModel.trim()) || saving}
+          disabled={(!chosenModel && !setupCustomModel.trim()) || saving || localOffline}
+          title={localOffline ? 'The local server is not running' : undefined}
         >
           Add
         </button>
@@ -575,6 +621,24 @@
     overflow-y: auto;
     padding: 28px 32px;
     background: var(--bg);
+  }
+  .first-run {
+    max-width: 720px;
+    margin-bottom: 20px;
+    padding: 12px 15px;
+    border: 1px solid color-mix(in srgb, var(--accent), transparent 60%);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--accent), transparent 94%);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .offline-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0;
+    font-size: 12.5px;
   }
   /* Drawer tier: tighter sides, headroom for the floating menu button. */
   @media (max-width: 719px) {
