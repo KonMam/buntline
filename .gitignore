@@ -1,10 +1,10 @@
 bin/
-/tether
+/buntline
 web/dist/
 web/node_modules/
 *.log
 .DS_Store
-tether.toml
+buntline.toml
 
 # Local working files, kept on disk but out of the repo.
 DECISIONS.md
@@ -12,4 +12,4 @@ PLAN-*.md
 RESEARCH*.md
 AGENTS.md
 Makefile.local
-.tether/
+.buntline/

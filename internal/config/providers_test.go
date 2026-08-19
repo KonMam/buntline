@@ -59,7 +59,7 @@ func TestCatalogProviderBasics(t *testing.T) {
 func TestResolvedProfilesAppendAppProviders(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	path := filepath.Join(dir, ".config", "tether", "providers.json")
+	path := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestResolvedProfilesAppendAppProviders(t *testing.T) {
 func TestResolvedProfilesCatalogDefaults(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	path := filepath.Join(dir, ".config", "tether", "providers.json")
+	path := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestResolvedProfilesCatalogDefaults(t *testing.T) {
 func TestResolvedProfilesMultipleModelsPerProvider(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	path := filepath.Join(dir, ".config", "tether", "providers.json")
+	path := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}

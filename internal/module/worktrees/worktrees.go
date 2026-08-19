@@ -1,4 +1,4 @@
-// Package worktrees isolates parallel tether sessions in separate git
+// Package worktrees isolates parallel buntline sessions in separate git
 // worktrees: each session gets its own checkout and branch, so two
 // sessions working the same repository cannot collide on file edits the
 // way two sessions sharing one working directory can. The user's own git
@@ -8,7 +8,7 @@
 //
 // The isolation story follows the field's consensus (Claude Code's
 // --worktree, Codex's detached-HEAD worktrees): a session's working
-// directory becomes the worktree path, and every tether mechanism that
+// directory becomes the worktree path, and every buntline mechanism that
 // keys off the workdir (file-tool confinement, per-session checkpoints,
 // memory, per-repo settings) keys off the isolated checkout instead.
 package worktrees
@@ -26,13 +26,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/module"
+	"github.com/KonMam/buntline/internal/module"
 )
 
 // Module creates and removes isolated worktrees. It is stateless by
 // design: the durable record of a worktree (its repo, branch, and the
-// session bound to it) lives in the repo's own .tether/worktrees.json,
-// so a worktree created by one tether instance is visible to the next.
+// session bound to it) lives in the repo's own .buntline/worktrees.json,
+// so a worktree created by one buntline instance is visible to the next.
 type Module struct {
 	// Lookup resolves a session id to its working directory (wired by
 	// the server), so cleanup can refuse to remove a worktree that a
@@ -51,7 +51,7 @@ func (m *Module) Info() module.Info {
 
 // Binding records one managed worktree: the repo it was created from,
 // its branch, and the session that owns it ("" before the session
-// exists). Persisted to <repo>/.tether/worktrees.json.
+// exists). Persisted to <repo>/.buntline/worktrees.json.
 type Binding struct {
 	Path    string `json:"path"`
 	Repo    string `json:"repo"`
@@ -60,10 +60,10 @@ type Binding struct {
 }
 
 // worktreesPath returns the binding file's location: inside the repo's
-// .tether dir, like settings.json and hooks.json, so it stays with the
+// .buntline dir, like settings.json and hooks.json, so it stays with the
 // repository and is shared across worktrees and machines.
 func worktreesPath(repo string) string {
-	return filepath.Join(repo, ".tether", "worktrees.json")
+	return filepath.Join(repo, ".buntline", "worktrees.json")
 }
 
 // Bindings reads the repository's worktree bindings; a missing file is
@@ -110,7 +110,7 @@ func run(ctx context.Context, repo string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = repo
 	// Inherited GIT_DIR/GIT_WORK_TREE would override the repo we mean
-	// (tether itself may run under a git hook); drop them.
+	// (buntline itself may run under a git hook); drop them.
 	cmd.Env = scrubGitEnv(os.Environ())
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
@@ -148,11 +148,11 @@ func gitRoot(ctx context.Context, dir string) (string, error) {
 
 // sanitizeName turns a requested name into a safe worktree name:
 // filesystem-hostile characters become dashes, and the name must not
-// collide with the repo's own .tether directory.
+// collide with the repo's own .buntline directory.
 func sanitizeName(name string) string {
 	name = strings.TrimSpace(strings.ToLower(name))
 	if name == "" {
-		name = "tether-" + time.Now().Format("20060102-150405")
+		name = "buntline-" + time.Now().Format("20060102-150405")
 	}
 	var sb strings.Builder
 	for _, r := range name {
@@ -171,7 +171,7 @@ func sanitizeName(name string) string {
 }
 
 // Create makes a new detached worktree of repo at
-// <repo>/.tether/worktrees/<name> on branch worktree-<name>, copies the
+// <repo>/.buntline/worktrees/<name> on branch worktree-<name>, copies the
 // repo's bootstrap files into it (so the isolated checkout carries the
 // same agent context), and records the binding. Returns the worktree's
 // absolute path and branch.
@@ -191,14 +191,14 @@ func (m *Module) Create(ctx context.Context, repo, name string) (string, string,
 	if _, err := os.Stat(root); err != nil {
 		return "", "", fmt.Errorf("repository does not exist: %s", root)
 	}
-	if err := os.MkdirAll(filepath.Join(root, ".tether"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".buntline"), 0o755); err != nil {
 		return "", "", err
 	}
 
-	// The worktrees dir lives under the repo's own .tether so it stays
+	// The worktrees dir lives under the repo's own .buntline so it stays
 	// with the repository and is gitignored by the repo's own ignores
-	// (the .tether dir is where settings/hooks/memory already live).
-	base := filepath.Join(root, ".tether", "worktrees")
+	// (the .buntline dir is where settings/hooks/memory already live).
+	base := filepath.Join(root, ".buntline", "worktrees")
 	if err := os.MkdirAll(base, 0o755); err != nil {
 		return "", "", err
 	}
@@ -279,9 +279,9 @@ func (m *Module) bootstrap(root, path string) error {
 var bootstrapFiles = []string{
 	"AGENTS.md",
 	"CLAUDE.md",
-	".tether/settings.json",
-	".tether/memory",
-	".tether/worktrees.json",
+	".buntline/settings.json",
+	".buntline/memory",
+	".buntline/worktrees.json",
 }
 
 // Bind binds an existing managed worktree to a session id.
@@ -310,22 +310,22 @@ func (m *Module) SessionFor(path string) string {
 }
 
 // repoFor walks up from a worktree path to find the repository root.
-// A managed worktree always lives at <repo>/.tether/worktrees/<name>,
-// so the repo root is the first ancestor whose .tether dir holds the
+// A managed worktree always lives at <repo>/.buntline/worktrees/<name>,
+// so the repo root is the first ancestor whose .buntline dir holds the
 // binding file. (The worktree's own .git is a file pointing at the main
-// repo, and its copied .tether holds only the bootstrap files.)
+// repo, and its copied .buntline holds only the bootstrap files.)
 func repoFor(path string) string {
 	cur := filepath.Clean(path)
 	for {
-		// A worktree itself has a copied .tether/worktrees.json; that is
-		// not the repo root. Only a .tether at the repo root (the parent
-		// of .tether/worktrees/) counts.
-		if _, err := os.Stat(filepath.Join(cur, ".tether", "worktrees.json")); err == nil &&
-			!strings.Contains(cur, filepath.Join(".tether", "worktrees")+string(filepath.Separator)) {
+		// A worktree itself has a copied .buntline/worktrees.json; that is
+		// not the repo root. Only a .buntline at the repo root (the parent
+		// of .buntline/worktrees/) counts.
+		if _, err := os.Stat(filepath.Join(cur, ".buntline", "worktrees.json")); err == nil &&
+			!strings.Contains(cur, filepath.Join(".buntline", "worktrees")+string(filepath.Separator)) {
 			return cur
 		}
 		if filepath.Base(filepath.Dir(cur)) == "worktrees" {
-			parent := filepath.Dir(filepath.Dir(cur)) // <repo>/.tether
+			parent := filepath.Dir(filepath.Dir(cur)) // <repo>/.buntline
 			return filepath.Dir(parent)               // <repo>
 		}
 		parent := filepath.Dir(cur)

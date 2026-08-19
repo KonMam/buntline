@@ -6,17 +6,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/module/memory"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/module/memory"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // TestMemoryIndexInjectedAtAttach proves a fresh session with a memory
 // index loads it as an instructions-kind first message after AGENTS.md.
 func TestMemoryIndexInjectedAtAttach(t *testing.T) {
 	workdir := t.TempDir()
-	// Write a memory index into the workdir's .tether/memory.
-	memDir := filepath.Join(workdir, ".tether", "memory")
+	// Write a memory index into the workdir's .buntline/memory.
+	memDir := filepath.Join(workdir, ".buntline", "memory")
 	if err := os.MkdirAll(memDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestMemoryIndexInjectedAtAttach(t *testing.T) {
 // module leaves the transcript clean.
 func TestMemoryIndexNotInjectedWhenModuleDisabled(t *testing.T) {
 	workdir := t.TempDir()
-	memDir := filepath.Join(workdir, ".tether", "memory")
+	memDir := filepath.Join(workdir, ".buntline", "memory")
 	if err := os.MkdirAll(memDir, 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
-// Package mcpclient connects tether to external MCP servers: the
+// Package mcpclient connects buntline to external MCP servers: the
 // third-party plugin mechanism, deliberately not a bespoke protocol.
-// Servers come from tether.toml ([[mcp_servers]]) or are added in the
+// Servers come from buntline.toml ([[mcp_servers]]) or are added in the
 // app (persisted to mcp.json); their tools join the registry namespaced
 // as <server>_<tool>, side-effectful by default so every call passes the
 // approval gate. When the combined tool count is large, the model gets
@@ -23,11 +23,11 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/secrets"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/secrets"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // deferThreshold is the combined MCP tool count above which individual
@@ -72,7 +72,7 @@ func (m *Module) Info() module.Info {
 	m.mu.Unlock()
 	desc := "Connect external MCP servers; their tools join the agent behind the approval gate."
 	if n == 0 {
-		desc += " Add servers on this page or as [[mcp_servers]] entries in tether.toml."
+		desc += " Add servers on this page or as [[mcp_servers]] entries in buntline.toml."
 	} else {
 		desc += fmt.Sprintf(" %d server(s) configured.", n)
 	}
@@ -209,7 +209,7 @@ func (m *Module) connect(srv config.MCPServer) (*connection, error) {
 		return nil, fmt.Errorf("unknown transport %q (stdio or http)", srv.Transport)
 	}
 
-	client := mcp.NewClient(&mcp.Implementation{Name: "tether", Version: "0.1"}, nil)
+	client := mcp.NewClient(&mcp.Implementation{Name: "buntline", Version: "0.1"}, nil)
 	session, err := client.Connect(ctx, transport, nil)
 	if err != nil {
 		return nil, fmt.Errorf("connect: %w", err)
@@ -698,7 +698,7 @@ func (t *callTool) Run(ctx context.Context, args json.RawMessage) (tools.Result,
 	return target.Run(ctx, in.Arguments)
 }
 
-// remoteTool adapts one MCP tool to tether's Tool interface.
+// remoteTool adapts one MCP tool to buntline's Tool interface.
 type remoteTool struct {
 	session *mcp.ClientSession
 	name    string // original name on the server
@@ -743,7 +743,7 @@ func (t *remoteTool) Run(ctx context.Context, args json.RawMessage) (tools.Resul
 	return tools.Result{Content: content}, nil
 }
 
-// resolveEnvValue expands ${secret:NAME} from tether's secrets store and
+// resolveEnvValue expands ${secret:NAME} from buntline's secrets store and
 // ${VAR} from the process environment. Resolution happens at connect
 // time so stored config never contains the secret itself.
 func resolveEnvValue(v string) string {

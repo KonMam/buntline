@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // EventType enumerates everything the agent does. The stream of these is

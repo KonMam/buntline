@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KonMam/tether/internal/module"
+	"github.com/KonMam/buntline/internal/module"
 )
 
 type Module struct {

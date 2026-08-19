@@ -19,7 +19,7 @@ func mustArgs(t *testing.T, v any) json.RawMessage {
 }
 
 func TestMemoryWriteReadIndexRoundTrip(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tether", "memory")
+	dir := filepath.Join(t.TempDir(), ".buntline", "memory")
 	w := &MemoryWrite{Dir: dir}
 	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
 		"content": "the API tests need a local Redis",
@@ -41,7 +41,7 @@ func TestMemoryWriteReadIndexRoundTrip(t *testing.T) {
 }
 
 func TestMemoryWriteTopicFile(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tether", "memory")
+	dir := filepath.Join(t.TempDir(), ".buntline", "memory")
 	w := &MemoryWrite{Dir: dir}
 	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
 		"file":    "debugging",
@@ -71,7 +71,7 @@ func TestMemoryReadEmpty(t *testing.T) {
 }
 
 func TestMemoryReadListsTopics(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tether", "memory")
+	dir := filepath.Join(t.TempDir(), ".buntline", "memory")
 	w := &MemoryWrite{Dir: dir}
 	_, _ = w.Run(context.Background(), mustArgs(t, map[string]string{"file": "debugging", "content": "x"}))
 	_, _ = w.Run(context.Background(), mustArgs(t, map[string]string{"file": "api", "content": "y"}))
@@ -86,7 +86,7 @@ func TestMemoryReadListsTopics(t *testing.T) {
 }
 
 func TestMemoryIndexBudgetRefused(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tether", "memory")
+	dir := filepath.Join(t.TempDir(), ".buntline", "memory")
 	w := &MemoryWrite{Dir: dir}
 	// Fill the index past the line budget.
 	var sb strings.Builder
@@ -123,7 +123,7 @@ func TestMemoryReadUnknownTopic(t *testing.T) {
 }
 
 func TestLoadIndexCaps(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tether", "memory")
+	dir := filepath.Join(t.TempDir(), ".buntline", "memory")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestLoadIndexCaps(t *testing.T) {
 // and the tools still read it afterwards.
 func TestMemorySurvivesCompaction(t *testing.T) {
 	workdir := t.TempDir()
-	dir := filepath.Join(workdir, ".tether", "memory")
+	dir := filepath.Join(workdir, ".buntline", "memory")
 	w := &MemoryWrite{Dir: dir}
 	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
 		"content": "the build needs GOFLAGS=-mod=mod",
@@ -189,7 +189,7 @@ func TestMemorySurvivesCompaction(t *testing.T) {
 // files are never deleted by the toggle.
 func TestMemoryToolsAfterModuleToggle(t *testing.T) {
 	workdir := t.TempDir()
-	memDir := filepath.Join(workdir, ".tether", "memory")
+	memDir := filepath.Join(workdir, ".buntline", "memory")
 	w := &MemoryWrite{Dir: memDir}
 	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
 		"content": "remember the redis requirement",

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/module"
+	"github.com/KonMam/buntline/internal/module"
 )
 
 // Workdir resolves a session id to its working directory.

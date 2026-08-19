@@ -61,5 +61,5 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: cd web && npm ci && npm run build
-      - run: go build -tags embedded -o tether ./cmd/tether
-      - run: ./tether -h 2>&1 | head -5 || true
+      - run: go build -tags embedded -o buntline ./cmd/buntline
+      - run: ./buntline -h 2>&1 | head -5 || true

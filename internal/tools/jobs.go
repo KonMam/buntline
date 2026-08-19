@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // JobStatus is one background job's lifecycle state. Terminal states

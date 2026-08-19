@@ -1,13 +1,13 @@
 .git
 bin
-tether
+buntline
 web/node_modules
 web/dist
 *.log
-tether.toml
+buntline.toml
 DECISIONS.md
 PLAN-*.md
 RESEARCH*.md
 AGENTS.md
 Makefile.local
-.tether
+.buntline

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // loopDetector flags a (tool, args, result) signature repeating more than

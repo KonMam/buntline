@@ -3,8 +3,8 @@ package session
 import (
 	"testing"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 func TestSessionRoundTrip(t *testing.T) {

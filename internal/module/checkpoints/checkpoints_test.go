@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 func TestSnapshotAndRestore(t *testing.T) {

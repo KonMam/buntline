@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // Bash runs a shell command in the working directory.

@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // SkillTool lets the model load a skill's body mid-turn. It is safe

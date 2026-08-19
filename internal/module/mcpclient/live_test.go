@@ -10,7 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/KonMam/tether/internal/config"
+	"github.com/KonMam/buntline/internal/config"
 )
 
 // startMCPServer serves a real MCP server with one echo tool over

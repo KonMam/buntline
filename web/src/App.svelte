@@ -63,7 +63,7 @@
     panel: { min: 260, max: 640, fallback: 380 },
   };
   function storedWidth(key: 'sidebar' | 'panel'): number {
-    const raw = Number(localStorage.getItem(`tether.pane.${key}`));
+    const raw = Number(localStorage.getItem(`buntline.pane.${key}`));
     const b = paneBounds[key];
     return raw >= b.min && raw <= b.max ? raw : b.fallback;
   }
@@ -86,7 +86,7 @@
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', upEvent);
       localStorage.setItem(
-        `tether.pane.${key}`,
+        `buntline.pane.${key}`,
         String(key === 'sidebar' ? sidebarWidth : panelWidth),
       );
     };

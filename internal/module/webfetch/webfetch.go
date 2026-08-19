@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type Module struct{}
@@ -74,7 +74,7 @@ func (t *Tool) Run(ctx context.Context, args json.RawMessage) (tools.Result, err
 	if err != nil {
 		return tools.Result{}, err
 	}
-	req.Header.Set("User-Agent", "tether/1.0 (+local harness)")
+	req.Header.Set("User-Agent", "buntline/1.0 (+local harness)")
 	resp, err := t.Client.Do(req)
 	if err != nil {
 		return tools.Result{}, err

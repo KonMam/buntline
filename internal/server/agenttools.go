@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // Agent control tools: the model-facing side of background subagents.

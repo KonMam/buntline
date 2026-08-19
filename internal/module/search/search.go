@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type Module struct {
@@ -26,7 +26,7 @@ type Module struct {
 func (m *Module) Info() module.Info {
 	desc := "Adds a web_search tool."
 	if !m.configured() {
-		desc += " Needs configuration: set [search] provider (searxng or brave), url or api_key in tether.toml."
+		desc += " Needs configuration: set [search] provider (searxng or brave), url or api_key in buntline.toml."
 	} else {
 		desc += fmt.Sprintf(" Using %s.", m.Cfg.Provider)
 	}

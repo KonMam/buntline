@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/KonMam/tether/internal/module"
+	"github.com/KonMam/buntline/internal/module"
 )
 
 // fakeOllama serves the native Ollama endpoints the module talks to and

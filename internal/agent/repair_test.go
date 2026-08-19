@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 func TestRepairJSON(t *testing.T) {

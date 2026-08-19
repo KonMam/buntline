@@ -27,9 +27,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // MemoryIndexLines and MemoryIndexBytes cap the MEMORY.md index: the
@@ -96,7 +96,7 @@ func (m *Module) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 // memoryDir returns the per-workdir memory directory.
 func memoryDir(workdir string) string {
-	return filepath.Join(workdir, ".tether", "memory")
+	return filepath.Join(workdir, ".buntline", "memory")
 }
 
 // LoadIndexFor loads the memory index for a workdir (capped), for the

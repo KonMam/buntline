@@ -2,7 +2,7 @@
 # Releases on tag push (see .github/workflows/release.yml).
 version: 2
 
-project_name: tether
+project_name: buntline
 
 before:
   hooks:
@@ -11,8 +11,8 @@ before:
     - sh -c "cd web && npm ci && npm run build"
 
 builds:
-  - main: ./cmd/tether
-    binary: tether
+  - main: ./cmd/buntline
+    binary: buntline
     flags:
       - -tags=embedded
     ldflags:
@@ -28,7 +28,7 @@ archives:
     files:
       - LICENSE
       - README.md
-      - deploy/tether.service
+      - deploy/buntline.service
 
 checksum:
   name_template: checksums.txt

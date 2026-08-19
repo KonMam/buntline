@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // Result is a tool's output. Content is what the model sees; Diff is an

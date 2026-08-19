@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 type Meta struct {

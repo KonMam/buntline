@@ -3,7 +3,7 @@ package server
 import (
 	"sync"
 
-	"github.com/KonMam/tether/internal/agent"
+	"github.com/KonMam/buntline/internal/agent"
 )
 
 // hub fans one session's event stream out to any number of SSE

@@ -40,7 +40,7 @@ type Skill struct {
 // order (project first, user-global second; a project skill overrides a
 // user skill with the same name).
 func skillDirs(workdir, userConfigDir string) []string {
-	dirs := []string{filepath.Join(workdir, ".tether", "skills")}
+	dirs := []string{filepath.Join(workdir, ".buntline", "skills")}
 	if userConfigDir != "" {
 		dirs = append(dirs, filepath.Join(userConfigDir, "skills"))
 	}

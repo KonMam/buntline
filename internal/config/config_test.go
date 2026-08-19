@@ -96,7 +96,7 @@ func TestAllowRule(t *testing.T) {
 
 func TestAddWorkdirAllowPreservesSettings(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, ".tether", "settings.json")
+	path := filepath.Join(dir, ".buntline", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}

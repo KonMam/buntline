@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/module/tasks"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/module/tasks"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // tasksRegistry is a real module registry carrying the tasks module, the

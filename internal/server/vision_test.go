@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // fakeVisionModule is a vision module the server gate can exercise

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/module/worktrees"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/module/worktrees"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // initGitRepo creates a scratch git repository with one commit and
@@ -79,8 +79,8 @@ func TestCreateSessionInWorktree(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &meta); err != nil {
 		t.Fatal(err)
 	}
-	// The session's workdir is the worktree, under the repo's .tether.
-	if !strings.Contains(meta.Workdir, filepath.Join(".tether", "worktrees")) {
+	// The session's workdir is the worktree, under the repo's .buntline.
+	if !strings.Contains(meta.Workdir, filepath.Join(".buntline", "worktrees")) {
 		t.Errorf("session workdir = %q, want a worktree under the repo", meta.Workdir)
 	}
 	if _, err := os.Stat(meta.Workdir); err != nil {

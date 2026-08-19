@@ -1,4 +1,4 @@
-# tether build targets. `make build` produces the release binary with the
+# buntline build targets. `make build` produces the release binary with the
 # frontend embedded; plain `go build ./...` works without any frontend
 # artifacts (web/dev.go serves from disk instead).
 
@@ -10,7 +10,7 @@ web:
 	cd web && npm run build
 
 build: web
-	go build -tags embedded -o bin/tether ./cmd/tether
+	go build -tags embedded -o bin/buntline ./cmd/buntline
 
 test:
 	go test -race ./...
@@ -29,13 +29,13 @@ check: fmt lint test build
 
 # Dev loop: Go API on :7433, Vite (with proxy + HMR) on :5173.
 dev:
-	@echo "terminal 1: go run ./cmd/tether -no-open"
+	@echo "terminal 1: go run ./cmd/buntline -no-open"
 	@echo "terminal 2: cd web && npm run dev"
 
 # Live-backend tests: tool pickup against real endpoints. Each test skips
 # when its backend is unreachable, so run what you have.
 integration:
-	TETHER_IT=1 go test ./internal/integration/ -v -count=1 -timeout 10m
+	BUNTLINE_IT=1 go test ./internal/integration/ -v -count=1 -timeout 10m
 
 clean:
 	rm -rf bin web/dist

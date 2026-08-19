@@ -244,7 +244,7 @@ func DetectProvider(key string) string {
 // file (the same rule that keeps MCP servers in mcp.json).
 func ProvidersPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "tether", "providers.json")
+	return filepath.Join(home, ".config", "buntline", "providers.json")
 }
 
 // AppProvider is one app-managed (provider, model) selection: a catalog

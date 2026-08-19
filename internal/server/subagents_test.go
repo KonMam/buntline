@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/session"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/session"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // newTestServer builds a server on a throwaway store, ready to resolve

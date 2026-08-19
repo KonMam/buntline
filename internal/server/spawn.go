@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
-// agentDef is a named agent from <workdir>/.tether/agents/<name>.md:
+// agentDef is a named agent from <workdir>/.buntline/agents/<name>.md:
 // optional "description:" and "tools:" lines in a --- frontmatter block,
 // body = the agent's system prompt.
 type agentDef struct {
@@ -26,7 +26,7 @@ type agentDef struct {
 }
 
 func loadAgentDefs(workdir string) []agentDef {
-	dir := filepath.Join(workdir, ".tether", "agents")
+	dir := filepath.Join(workdir, ".buntline", "agents")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
@@ -128,7 +128,7 @@ func (t *spawnTool) Def() provider.ToolDef {
 	}
 }
 
-const subagentPrompt = "You are a subagent of tether working in %s. " +
+const subagentPrompt = "You are a subagent of buntline working in %s. " +
 	"Complete the task you are given using the available tools, then reply with a final report. " +
 	"Your last message is returned verbatim to the agent that spawned you; make it a dense, complete answer."
 
@@ -156,7 +156,7 @@ func (t *spawnTool) Run(ctx context.Context, args json.RawMessage) (tools.Result
 			}
 		}
 		if !found {
-			return tools.Result{}, fmt.Errorf("no agent named %q in .tether/agents", in.Agent)
+			return tools.Result{}, fmt.Errorf("no agent named %q in .buntline/agents", in.Agent)
 		}
 	}
 

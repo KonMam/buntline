@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // tinyRouteModule is a minimal non-core module with a route, so the HTTP

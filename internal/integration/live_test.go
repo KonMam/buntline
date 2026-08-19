@@ -1,5 +1,5 @@
-// Package integration holds tests that exercise tether against live
-// model backends. They are opt-in: set TETHER_IT=1 (see `make
+// Package integration holds tests that exercise buntline against live
+// model backends. They are opt-in: set BUNTLINE_IT=1 (see `make
 // integration`). Each test also checks for the backend it needs and
 // skips with a reason when it is absent, so the suite degrades to
 // whatever is reachable from this machine.
@@ -14,16 +14,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 func gate(t *testing.T) {
 	t.Helper()
-	if os.Getenv("TETHER_IT") == "" {
-		t.Skip("set TETHER_IT=1 to run live integration tests")
+	if os.Getenv("BUNTLINE_IT") == "" {
+		t.Skip("set BUNTLINE_IT=1 to run live integration tests")
 	}
 }
 
@@ -166,7 +166,7 @@ func TestDeepSeekBackgroundJob(t *testing.T) {
 
 func TestOllamaToolPickup(t *testing.T) {
 	gate(t)
-	base := os.Getenv("TETHER_IT_OLLAMA")
+	base := os.Getenv("BUNTLINE_IT_OLLAMA")
 	if base == "" {
 		base = "http://localhost:11434"
 	}
@@ -176,7 +176,7 @@ func TestOllamaToolPickup(t *testing.T) {
 	} else {
 		_ = resp.Body.Close()
 	}
-	model := os.Getenv("TETHER_IT_MODEL")
+	model := os.Getenv("BUNTLINE_IT_MODEL")
 	if model == "" {
 		model = "qwen3.5:9b"
 	}

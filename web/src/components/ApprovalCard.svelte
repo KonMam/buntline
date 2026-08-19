@@ -32,7 +32,7 @@
     <button
       class="allow-session"
       onclick={() => decide('allow_always')}
-      title="Adds a rule to this repository's .tether/settings.json; bash rules match the command's first words"
+      title="Adds a rule to this repository's .buntline/settings.json; bash rules match the command's first words"
     >
       always allow in this repo
     </button>

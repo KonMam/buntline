@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// writeSkill creates .tether/skills/<name>/SKILL.md in the workdir (or
+// writeSkill creates .buntline/skills/<name>/SKILL.md in the workdir (or
 // skills/<name>/SKILL.md under a user config dir) with the given content.
 func writeSkill(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -24,10 +24,10 @@ func writeSkill(t *testing.T, dir, name, content string) {
 	}
 }
 
-// writeProjectSkill writes .tether/skills/<name>/SKILL.md under a workdir.
+// writeProjectSkill writes .buntline/skills/<name>/SKILL.md under a workdir.
 func writeProjectSkill(t *testing.T, workdir, name, content string) {
 	t.Helper()
-	writeSkill(t, filepath.Join(workdir, ".tether"), name, content)
+	writeSkill(t, filepath.Join(workdir, ".buntline"), name, content)
 }
 
 func TestParseSkillFrontmatter(t *testing.T) {
@@ -116,7 +116,7 @@ func TestLoadSkillsProjectAndUser(t *testing.T) {
 func TestHandleListIncludesCommandsAndSkills(t *testing.T) {
 	workdir := t.TempDir()
 	// A plain command.
-	cmdDir := filepath.Join(workdir, ".tether", "commands")
+	cmdDir := filepath.Join(workdir, ".buntline", "commands")
 	if err := os.MkdirAll(cmdDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestHandleRenderUnknown(t *testing.T) {
 
 func TestHandleRenderCommandBody(t *testing.T) {
 	workdir := t.TempDir()
-	cmdDir := filepath.Join(workdir, ".tether", "commands")
+	cmdDir := filepath.Join(workdir, ".buntline", "commands")
 	if err := os.MkdirAll(cmdDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

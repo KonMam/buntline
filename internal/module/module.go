@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type Info struct {
@@ -229,7 +229,7 @@ func (r *Registry) Get(id string) Module {
 }
 
 // EnabledFor resolves a module's effective state for one session:
-// per-repository overrides (from .tether/settings.json) win over the
+// per-repository overrides (from .buntline/settings.json) win over the
 // global toggle. Core modules are always effectively enabled: their
 // contribution is decided at build time, not by a toggle.
 func (r *Registry) EnabledFor(id string, overrides map[string]bool) bool {

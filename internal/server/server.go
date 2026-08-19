@@ -20,16 +20,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/module/memory"
-	"github.com/KonMam/tether/internal/module/tasks"
-	"github.com/KonMam/tether/internal/module/worktrees"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/secrets"
-	"github.com/KonMam/tether/internal/session"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/module/memory"
+	"github.com/KonMam/buntline/internal/module/tasks"
+	"github.com/KonMam/buntline/internal/module/worktrees"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/secrets"
+	"github.com/KonMam/buntline/internal/session"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type Server struct {
@@ -364,7 +364,7 @@ func (s *Server) describeImages(ctx context.Context, model string, images []stri
 		return "", fmt.Errorf("this model (%s) does not accept images;%s", model, hint)
 	}
 	if !vd.Configured() {
-		return "", fmt.Errorf("this model (%s) does not accept images;%s. Or configure [vision] in tether.toml to have images described by a vision model automatically", model, hint)
+		return "", fmt.Errorf("this model (%s) does not accept images;%s. Or configure [vision] in buntline.toml to have images described by a vision model automatically", model, hint)
 	}
 	desc, err := vd.Describe(ctx, images)
 	if err != nil {
@@ -1224,7 +1224,7 @@ func (s *Server) handleInterrupt(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleAgents lists the named subagents defined in the session's
-// repository (.tether/agents/*.md), for the project view.
+// repository (.buntline/agents/*.md), for the project view.
 func (s *Server) handleAgents(w http.ResponseWriter, r *http.Request) {
 	workdir, err := s.WorkdirFor(r.PathValue("id"))
 	if err != nil {
@@ -1480,7 +1480,7 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", "tether-"+meta.ID+".md"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", "buntline-"+meta.ID+".md"))
 	_, _ = io.WriteString(w, sb.String())
 }
 

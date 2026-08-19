@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type observerModule struct {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/config"
+	"github.com/KonMam/buntline/internal/config"
 )
 
 // serveVision answers one /v1/chat/completions request with an SSE

@@ -2,7 +2,7 @@
 // The CSS keys off data-theme on <html>; with no attribute the OS decides.
 export type Theme = 'system' | 'light' | 'dark';
 
-const KEY = 'tether-theme';
+const KEY = 'buntline-theme';
 
 function apply(theme: Theme) {
   if (theme === 'system') {

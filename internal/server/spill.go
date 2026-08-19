@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/KonMam/tether/internal/session"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/session"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // sessionSearcher adapts the session store's Search to the tools package's

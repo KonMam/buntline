@@ -52,5 +52,5 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
-            ghcr.io/konmam/tether:${{ steps.version.outputs.version }}
-            ghcr.io/konmam/tether:latest
+            ghcr.io/konmam/buntline:${{ steps.version.outputs.version }}
+            ghcr.io/konmam/buntline:latest

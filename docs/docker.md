@@ -1,12 +1,12 @@
-# Running tether in Docker
+# Running buntline in Docker
 
-Images are published to `ghcr.io/konmam/tether` for amd64 and arm64, so a
+Images are published to `ghcr.io/konmam/buntline` for amd64 and arm64, so a
 Raspberry Pi (64-bit OS) works the same as a server. A ready-made stack is
 in [deploy/compose.yaml](../deploy/compose.yaml):
 
 ```bash
-mkdir tether && cd tether
-curl -LO https://raw.githubusercontent.com/KonMam/tether/main/deploy/compose.yaml
+mkdir buntline && cd buntline
+curl -LO https://raw.githubusercontent.com/KonMam/buntline/main/deploy/compose.yaml
 docker compose up -d
 ```
 
@@ -19,7 +19,7 @@ to (bash, git, ripgrep); if your sessions need more (compilers, npm),
 extend the image:
 
 ```dockerfile
-FROM ghcr.io/konmam/tether:latest
+FROM ghcr.io/konmam/buntline:latest
 RUN apt-get update && apt-get install -y golang nodejs && rm -rf /var/lib/apt/lists/*
 ```
 
@@ -28,32 +28,32 @@ RUN apt-get update && apt-get install -y golang nodejs && rm -rf /var/lib/apt/li
 Everything lives in one volume, mounted at `/data`:
 
 - `/data/sessions`: session transcripts (JSONL)
-- `/data/.config/tether/`: config.toml, secrets, system prompt
+- `/data/.config/buntline/`: config.toml, secrets, system prompt
 - `/data/modules.json`: module toggles
 
 ## Providers
 
-Set the default provider with `TETHER_BASE_URL`, `TETHER_MODEL`, and
-`TETHER_API_KEY` (see the compose example), or manage providers in the
+Set the default provider with `BUNTLINE_BASE_URL`, `BUNTLINE_MODEL`, and
+`BUNTLINE_API_KEY` (see the compose example), or manage providers in the
 UI's Models view. Local Ollama is optional everywhere: without it the
 Models view shows local providers as unavailable and everything else
 works. To use models from an Ollama on another machine, point
-`TETHER_BASE_URL` at it.
+`BUNTLINE_BASE_URL` at it.
 
 ## Reverse proxy
 
 The container listens on `0.0.0.0:7433` (inside the compose network
 only; no host port is published). Point your proxy at
-`tether:7433` and set `TETHER_ALLOWED_HOSTS` to the hostname you serve
+`buntline:7433` and set `BUNTLINE_ALLOWED_HOSTS` to the hostname you serve
 it under, or the DNS-rebinding guard will reject the requests. Caddy
 example:
 
 ```
-tether.example.com {
-    reverse_proxy tether:7433
+buntline.example.com {
+    reverse_proxy buntline:7433
 }
 ```
 
-The same warning as everywhere else applies: tether has no
+The same warning as everywhere else applies: buntline has no
 authentication, so the hostname must only be reachable from a network
 you trust (LAN-only DNS, VPN). Never expose it to the internet.

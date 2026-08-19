@@ -1,15 +1,15 @@
 # Contributing
 
-Thanks for your interest in tether. Issues and pull requests are welcome.
+Thanks for your interest in buntline. Issues and pull requests are welcome.
 
 ## Setup
 
 You need Go 1.25+, Node 22+, and ripgrep.
 
 ```bash
-git clone https://github.com/KonMam/tether
-cd tether && cd web && npm ci && cd ..
-make build          # embedded binary at bin/tether
+git clone https://github.com/KonMam/buntline
+cd buntline && cd web && npm ci && cd ..
+make build          # embedded binary at bin/buntline
 ```
 
 ## Development loop
@@ -17,7 +17,7 @@ make build          # embedded binary at bin/tether
 The backend and frontend run separately during development:
 
 ```bash
-go run ./cmd/tether -no-open    # Go API on :7433 (serves web/dist if built)
+go run ./cmd/buntline -no-open    # Go API on :7433 (serves web/dist if built)
 cd web && npm run dev           # Vite on :5173 with HMR, proxies /api
 ```
 
@@ -47,7 +47,7 @@ loop, tools, or provider code.
 
 ## Layout
 
-- `cmd/tether`: entrypoint, flags, server and headless startup, shutdown
+- `cmd/buntline`: entrypoint, flags, server and headless startup, shutdown
 - `internal/agent`: the loop. Rounds, tool calls, approvals, steering,
   loop detection, tool-call repair, compaction
 - `internal/provider`: OpenAI-compatible streaming client (SSE). One

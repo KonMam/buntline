@@ -3,12 +3,12 @@
 ## Reporting a vulnerability
 
 Report vulnerabilities privately via
-[GitHub security advisories](https://github.com/KonMam/tether/security/advisories/new).
+[GitHub security advisories](https://github.com/KonMam/buntline/security/advisories/new).
 Please do not open public issues for security problems.
 
 ## Scope
 
-tether executes shell commands and edits files by design; what counts as a
+buntline executes shell commands and edits files by design; what counts as a
 vulnerability is a break in its stated boundaries:
 
 - File-tool access escaping the session's working directory.

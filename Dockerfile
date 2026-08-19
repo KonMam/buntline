@@ -17,7 +17,7 @@ COPY --from=web /src/web/dist ./web/dist
 ARG TARGETOS TARGETARCH VERSION=dev
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -tags embedded -ldflags "-s -w -X main.version=$VERSION" \
-    -o /out/tether ./cmd/tether
+    -o /out/buntline ./cmd/buntline
 
 # Runtime carries the tools the agent shells out to. The agent only sees
 # this filesystem: mount what it should work on at /workspace.
@@ -25,13 +25,13 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash git ripgrep ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=build /out/tether /usr/local/bin/tether
+COPY --from=build /out/buntline /usr/local/bin/buntline
 
 # All state (config, secrets, sessions) lives under /data: one volume.
 ENV HOME=/data \
-    TETHER_DATA_DIR=/data \
-    TETHER_SESSIONS_DIR=/data/sessions \
-    TETHER_ADDR=0.0.0.0:7433
+    BUNTLINE_DATA_DIR=/data \
+    BUNTLINE_SESSIONS_DIR=/data/sessions \
+    BUNTLINE_ADDR=0.0.0.0:7433
 WORKDIR /workspace
 EXPOSE 7433
-ENTRYPOINT ["tether", "-no-open"]
+ENTRYPOINT ["buntline", "-no-open"]

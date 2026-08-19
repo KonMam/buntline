@@ -1,4 +1,4 @@
-module github.com/KonMam/tether
+module github.com/KonMam/buntline
 
 go 1.25.0
 

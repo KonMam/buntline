@@ -1,6 +1,6 @@
-# tether
+# buntline
 
-[![ci](https://github.com/KonMam/tether/actions/workflows/ci.yml/badge.svg)](https://github.com/KonMam/tether/actions/workflows/ci.yml)
+[![ci](https://github.com/KonMam/buntline/actions/workflows/ci.yml/badge.svg)](https://github.com/KonMam/buntline/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A fast harness for self-hosted and API LLMs. One Go binary runs an agent
@@ -18,11 +18,11 @@ loop (tools, permissions, sessions) and serves a browser UI on localhost.
   run (args, result, duration), approval, and per-turn token usage,
   including provider cache hits.
 - **Sessions** persist as plain JSONL under
-  `~/.local/share/tether/sessions/`. Resume from the sidebar.
+  `~/.local/share/buntline/sessions/`. Resume from the sidebar.
 - **`/compact`** summarizes and resets the transcript explicitly, because
   rewriting history invalidates prefix caching. The stats show what it
   costs.
-- **Headless mode**: `tether -p "prompt"` streams events as JSONL to
+- **Headless mode**: `buntline -p "prompt"` streams events as JSONL to
   stdout.
 
 ## Install
@@ -31,22 +31,22 @@ Prerequisites: ripgrep, and an OpenAI-compatible server to talk to (e.g.
 `ollama serve`).
 
 **From a release**: download the archive for your platform from
-[Releases](https://github.com/KonMam/tether/releases), unpack, and put
-`tether` on your PATH. Then:
+[Releases](https://github.com/KonMam/buntline/releases), unpack, and put
+`buntline` on your PATH. Then:
 
 ```bash
-tether        # serves http://localhost:7433 and opens the browser
+buntline        # serves http://localhost:7433 and opens the browser
 ```
 
 **From source** (needs Go 1.25+ and Node 22+):
 
 ```bash
-make build          # builds the web UI and embeds it into bin/tether
-./bin/tether
+make build          # builds the web UI and embeds it into bin/buntline
+./bin/buntline
 ```
 
 **Docker**: images for amd64/arm64 are on
-[ghcr.io/konmam/tether](https://ghcr.io/konmam/tether); see
+[ghcr.io/konmam/buntline](https://ghcr.io/konmam/buntline); see
 [docs/docker.md](docs/docker.md) for the compose setup.
 
 Running it on a home server? See [docs/linux.md](docs/linux.md) for the
@@ -54,11 +54,11 @@ systemd unit and remote-access setup, or run the container.
 
 ## Configuration
 
-Configuration precedence: flags > `TETHER_*` env vars > `./tether.toml` >
-`~/.config/tether/config.toml`.
+Configuration precedence: flags > `BUNTLINE_*` env vars > `./buntline.toml` >
+`~/.config/buntline/config.toml`.
 
 ```toml
-# tether.toml
+# buntline.toml
 base_url = "http://localhost:11434/v1"
 model    = "qwen3.5:9b"
 
@@ -79,13 +79,13 @@ api_key  = "${MOONSHOT_API_KEY}"
 ```
 
 The prompt has two levels: a minimal global system prompt (view and edit
-via the "prompt" button, stored at `~/.config/tether/system.md`) and
+via the "prompt" button, stored at `~/.config/buntline/system.md`) and
 per-directory project instructions from `AGENTS.md` (or `CLAUDE.md`),
 injected into the conversation and visible as a collapsed chip.
 
 ## Security model
 
-tether runs shell commands, so know where the boundaries are:
+buntline runs shell commands, so know where the boundaries are:
 
 - File tools are confined to the session's working directory.
   Side-effectful tools, including every `bash` command, stop the loop
@@ -105,7 +105,7 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 ## Development
 
 ```bash
-go run ./cmd/tether -no-open    # API on :7433 (serves web/dist if built)
+go run ./cmd/buntline -no-open    # API on :7433 (serves web/dist if built)
 cd web && npm run dev           # Vite dev server on :5173, proxies /api
 make check                      # fmt + lint + tests + release build
 ```

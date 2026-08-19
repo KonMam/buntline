@@ -12,8 +12,8 @@
 package core
 
 import (
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // Files is the agent's file surface: read, write, edit. The harness

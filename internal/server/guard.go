@@ -50,7 +50,7 @@ func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := hostnameOf(r.Host)
 		if !hostOK(host) {
-			http.Error(w, "unrecognized Host header (DNS rebinding protection); if tether is legitimately served under this name, add it to allowed_hosts in config.toml", http.StatusForbidden)
+			http.Error(w, "unrecognized Host header (DNS rebinding protection); if buntline is legitimately served under this name, add it to allowed_hosts in config.toml", http.StatusForbidden)
 			return
 		}
 		if o := r.Header.Get("Origin"); o != "" {

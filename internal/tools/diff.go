@@ -15,7 +15,7 @@ import (
 // already read all day. Returns "" if diffing fails; a missing diff only
 // degrades the UI, never the edit itself.
 func unifiedDiff(ctx context.Context, label, before, after string) string {
-	dir, err := os.MkdirTemp("", "tether-diff-")
+	dir, err := os.MkdirTemp("", "buntline-diff-")
 	if err != nil {
 		return ""
 	}

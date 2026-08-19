@@ -17,13 +17,13 @@ import (
 	"sync"
 )
 
-const service = "tether"
+const service = "buntline"
 
 var mu sync.Mutex
 
 func filePath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "tether", "secrets.json")
+	return filepath.Join(home, ".config", "buntline", "secrets.json")
 }
 
 func useKeychain() bool {
@@ -39,7 +39,7 @@ func Backend() string {
 	if useKeychain() {
 		return "macOS Keychain"
 	}
-	return "~/.config/tether/secrets.json"
+	return "~/.config/buntline/secrets.json"
 }
 
 // Get returns the stored value for name, or "".
@@ -119,7 +119,7 @@ func remove(name string) error {
 
 func indexPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "tether", "secret-names.json")
+	return filepath.Join(home, ".config", "buntline", "secret-names.json")
 }
 
 func indexRead() []string {

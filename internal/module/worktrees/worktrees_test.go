@@ -151,14 +151,14 @@ func TestRemoveRefusesDirtyWork(t *testing.T) {
 func TestBootstrapCopiesContext(t *testing.T) {
 	repo := initRepo(t)
 	// The bootstrap files are gitignored (untracked), like the real
-	// .tether dir.
-	gitignore := ".tether/\n"
+	// .buntline dir.
+	gitignore := ".buntline/\n"
 	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte(gitignore), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(repo, "AGENTS.md"), "# Project\nBuild with make.\n")
-	writeFile(t, filepath.Join(repo, ".tether", "settings.json"), `{"model":"test-model"}`)
-	writeFile(t, filepath.Join(repo, ".tether", "memory", "MEMORY.md"), "# Memory\n- The build is make\n")
+	writeFile(t, filepath.Join(repo, ".buntline", "settings.json"), `{"model":"test-model"}`)
+	writeFile(t, filepath.Join(repo, ".buntline", "memory", "MEMORY.md"), "# Memory\n- The build is make\n")
 
 	m := &Module{}
 	path, _, err := m.Create(context.Background(), repo, "ctx")
@@ -166,7 +166,7 @@ func TestBootstrapCopiesContext(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	for _, rel := range []string{"AGENTS.md", ".tether/settings.json", ".tether/memory/MEMORY.md", ".tether/worktrees.json"} {
+	for _, rel := range []string{"AGENTS.md", ".buntline/settings.json", ".buntline/memory/MEMORY.md", ".buntline/worktrees.json"} {
 		if _, err := os.Stat(filepath.Join(path, rel)); err != nil {
 			t.Errorf("bootstrap did not copy %s: %v", rel, err)
 		}

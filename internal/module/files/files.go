@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 const readCap = 256 * 1024

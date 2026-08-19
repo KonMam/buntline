@@ -4,7 +4,7 @@
 // switch.
 package subagents
 
-import "github.com/KonMam/tether/internal/module"
+import "github.com/KonMam/buntline/internal/module"
 
 type Module struct{}
 

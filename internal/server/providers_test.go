@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 // TestProviderModelsRoute proves the generic /v1/models listing works for
@@ -180,7 +180,7 @@ func TestCreateSessionUsesDefaultAppProvider(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	// providers.json: zai is the default app provider.
-	p := filepath.Join(dir, ".config", "tether", "providers.json")
+	p := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestCreateSessionUsesDefaultAppProvider(t *testing.T) {
 func TestCreateSessionAppDefaultWinsOverProfileModel(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	p := filepath.Join(dir, ".config", "tether", "providers.json")
+	p := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +257,7 @@ func TestCreateSessionAppDefaultWinsOverProfileModel(t *testing.T) {
 func TestCreateSessionExplicitModel(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	p := filepath.Join(dir, ".config", "tether", "providers.json")
+	p := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -513,7 +513,7 @@ func TestAppProviderMultipleModels(t *testing.T) {
 func TestDeleteAppProviderTombstones(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	p := filepath.Join(dir, ".config", "tether", "providers.json")
+	p := filepath.Join(dir, ".config", "buntline", "providers.json")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}

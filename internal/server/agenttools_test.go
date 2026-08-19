@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // immediateProvider answers every model call with a plain text reply, so

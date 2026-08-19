@@ -19,10 +19,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // sideEffectful lists the tools that warrant a snapshot.
@@ -89,7 +89,7 @@ func (m *Module) git(ctx context.Context, sessionID, workdir string, args ...str
 	defer cancel()
 	full := append([]string{"--git-dir=" + m.gitDir(sessionID), "--work-tree=" + workdir}, args...)
 	cmd := exec.CommandContext(ctx, "git", full...)
-	// If tether itself runs under a git hook (or tests run under
+	// If buntline itself runs under a git hook (or tests run under
 	// lefthook), git exports GIT_DIR/GIT_INDEX_FILE to child processes,
 	// which would silently redirect the shadow repo's operations.
 	cmd.Env = scrubGitEnv(os.Environ())
@@ -147,8 +147,8 @@ func (i *interceptor) BeforeTool(ctx context.Context, call provider.ToolCall) (s
 	if _, err := i.m.git(ctx, i.sessionID, i.workdir, "add", "-A"); err != nil {
 		return "snapshot failed: " + err.Error(), nil
 	}
-	_, _ = i.m.git(ctx, i.sessionID, i.workdir, "-c", "user.name=tether",
-		"-c", "user.email=tether@local", "commit", "-q", "--allow-empty",
+	_, _ = i.m.git(ctx, i.sessionID, i.workdir, "-c", "user.name=buntline",
+		"-c", "user.email=buntline@local", "commit", "-q", "--allow-empty",
 		"-m", fmt.Sprintf("before %s %s", call.Name, call.ID))
 	ref, err := i.m.git(ctx, i.sessionID, i.workdir, "rev-parse", "HEAD")
 	if err != nil {

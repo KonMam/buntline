@@ -61,17 +61,17 @@
     return parts.length > 2 ? parts.slice(-2).join('/') : p;
   }
 
-  // A worktree-backed session's workdir ends with .tether/worktrees/<name>;
+  // A worktree-backed session's workdir ends with .buntline/worktrees/<name>;
   // show it as a tag so parallel isolated sessions are distinguishable.
   function isWorktree(p: string): boolean {
-    return p.includes('/.tether/worktrees/');
+    return p.includes('/.buntline/worktrees/');
   }
 </script>
 
 <aside>
   <header>
     <span class="brand"
-      >tether{#if version}<span class="ver" title="tether {version}">{version}</span>{/if}</span
+      >buntline{#if version}<span class="ver" title="buntline {version}">{version}</span>{/if}</span
     >
     <button class="icon-btn" onclick={onnew} title="New session" aria-label="New session">
       <Icon name="plus" />

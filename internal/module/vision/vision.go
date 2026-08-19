@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
 )
 
 // Module is the vision-translation feature. The server's send gate
@@ -31,7 +31,7 @@ type Module struct {
 func (m *Module) Info() module.Info {
 	desc := "Describes attached images with a vision model when the main model cannot see them."
 	if !m.Configured() {
-		desc += " Needs configuration: set [vision] base_url and model in tether.toml."
+		desc += " Needs configuration: set [vision] base_url and model in buntline.toml."
 	} else {
 		desc += fmt.Sprintf(" Using %s.", m.Cfg.Model)
 	}
@@ -62,7 +62,7 @@ func (m *Module) client() provider.Provider {
 // prompt is tuned to be dense, objective, and complete.
 func (m *Module) Describe(ctx context.Context, images []string) (string, error) {
 	if !m.Configured() {
-		return "", fmt.Errorf("vision is not configured: set [vision] base_url and model in tether.toml")
+		return "", fmt.Errorf("vision is not configured: set [vision] base_url and model in buntline.toml")
 	}
 	if len(images) == 0 {
 		return "", fmt.Errorf("no images to describe")

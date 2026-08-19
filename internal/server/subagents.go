@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
+	"github.com/KonMam/buntline/internal/agent"
 )
 
 // SubagentStatus is the lifecycle state of one spawned child. Running

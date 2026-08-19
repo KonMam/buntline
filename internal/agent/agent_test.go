@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // fakeProvider replays a script: each Stream call pops the next canned
@@ -1127,7 +1127,7 @@ func TestResumeRepairsDuplicateToolResult(t *testing.T) {
 		{Role: provider.RoleUser, Content: "run the tests"},
 		{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "c1", Name: "bash", Args: "{}"}}},
 		{Role: provider.RoleTool, ToolCallID: "c1", Content: "[started bash; working in the background]"},
-		{Role: provider.RoleTool, ToolCallID: "c1", Content: "ok github.com/KonMam/tether"},
+		{Role: provider.RoleTool, ToolCallID: "c1", Content: "ok github.com/KonMam/buntline"},
 	}
 	fake := &fakeProvider{script: [][]provider.Event{textReply("done")}}
 	a, _ := newTestAgent(t, fake, &scriptedApprover{})
@@ -1143,7 +1143,7 @@ func TestResumeRepairsDuplicateToolResult(t *testing.T) {
 	// The repair must not lose the real result.
 	var kept bool
 	for _, m := range fake.requests[0].Messages {
-		if strings.Contains(m.Content, "ok github.com/KonMam/tether") {
+		if strings.Contains(m.Content, "ok github.com/KonMam/buntline") {
 			kept = true
 		}
 	}

@@ -1,5 +1,5 @@
 // Package commands loads project slash commands and skills: markdown
-// files in <workdir>/.tether/commands/ (one command per file, the body is
+// files in <workdir>/.buntline/commands/ (one command per file, the body is
 // the prompt) and Agent Skills from skills/*/SKILL.md in the project and
 // user-global skill directories. Commands keep the historical shape;
 // skills add frontmatter, progressive disclosure, and turn-scoped
@@ -14,14 +14,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 // Workdir resolves a session id to its working directory.
 type Workdir func(sessionID string) (string, error)
 
-// UserConfigDir resolves the user config directory (~/.config/tether),
+// UserConfigDir resolves the user config directory (~/.config/buntline),
 // where user-global skills live. Injected so the module stays testable.
 type UserConfigDir func() string
 
@@ -34,7 +34,7 @@ func (m *Module) Info() module.Info {
 	return module.Info{
 		ID:          "commands",
 		Name:        "Slash commands and skills",
-		Description: "Project prompts from .tether/commands/*.md and Agent Skills from skills/*/SKILL.md, available as /name in the composer.",
+		Description: "Project prompts from .buntline/commands/*.md and Agent Skills from skills/*/SKILL.md, available as /name in the composer.",
 		Default:     true,
 	}
 }
@@ -100,10 +100,10 @@ func (m *Module) handleList(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"commands": cmds})
 }
 
-// loadCommands reads <workdir>/.tether/commands/*.md.
+// loadCommands reads <workdir>/.buntline/commands/*.md.
 func loadCommands(workdir string) []command {
 	cmds := []command{}
-	dir := filepath.Join(workdir, ".tether", "commands")
+	dir := filepath.Join(workdir, ".buntline", "commands")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return cmds
@@ -195,5 +195,5 @@ func defaultUserConfigDir() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".config", "tether")
+	return filepath.Join(home, ".config", "buntline")
 }

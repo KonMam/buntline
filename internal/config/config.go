@@ -1,5 +1,5 @@
 // Package config resolves settings with the precedence:
-// flags > environment > ./tether.toml > ~/.config/tether/config.toml.
+// flags > environment > ./buntline.toml > ~/.config/buntline/config.toml.
 package config
 
 import (
@@ -30,7 +30,7 @@ type Config struct {
 	// name). Loopback names, IP literals, and the bound host are always
 	// accepted; see server guard for the rebinding rationale.
 	AllowedHosts []string `toml:"allowed_hosts"`
-	// SessionsDir defaults to ~/.local/share/tether/sessions.
+	// SessionsDir defaults to ~/.local/share/buntline/sessions.
 	SessionsDir string `toml:"sessions_dir"`
 	// DataDir holds harness state (module toggles); defaults next to
 	// SessionsDir.
@@ -87,7 +87,7 @@ type MCPServer struct {
 	Args      []string `toml:"args" json:"args,omitempty"`
 	URL       string   `toml:"url" json:"url,omitempty"`
 	// Env is extra environment for stdio servers. Values support
-	// ${VAR} (process environment) and ${secret:NAME} (tether's secrets
+	// ${VAR} (process environment) and ${secret:NAME} (buntline's secrets
 	// store), resolved at connect time, never persisted expanded.
 	Env map[string]string `toml:"env" json:"env,omitempty"`
 }
@@ -160,8 +160,8 @@ func Defaults() Config {
 		BaseURL:     "http://localhost:11434/v1",
 		Model:       "qwen3.5:9b",
 		Addr:        "localhost:7433",
-		SessionsDir: filepath.Join(home, ".local", "share", "tether", "sessions"),
-		DataDir:     filepath.Join(home, ".local", "share", "tether"),
+		SessionsDir: filepath.Join(home, ".local", "share", "buntline", "sessions"),
+		DataDir:     filepath.Join(home, ".local", "share", "buntline"),
 	}
 }
 
@@ -172,8 +172,8 @@ func Load() (Config, error) {
 
 	home, _ := os.UserHomeDir()
 	for _, path := range []string{
-		filepath.Join(home, ".config", "tether", "config.toml"),
-		"tether.toml",
+		filepath.Join(home, ".config", "buntline", "config.toml"),
+		"buntline.toml",
 	} {
 		if _, err := os.Stat(path); err != nil {
 			continue
@@ -183,34 +183,34 @@ func Load() (Config, error) {
 		}
 	}
 
-	if v := os.Getenv("TETHER_BASE_URL"); v != "" {
+	if v := os.Getenv("BUNTLINE_BASE_URL"); v != "" {
 		cfg.BaseURL = v
 	}
-	if v := os.Getenv("TETHER_MODEL"); v != "" {
+	if v := os.Getenv("BUNTLINE_MODEL"); v != "" {
 		cfg.Model = v
 	}
-	if v := os.Getenv("TETHER_API_KEY"); v != "" {
+	if v := os.Getenv("BUNTLINE_API_KEY"); v != "" {
 		cfg.APIKey = v
 	}
-	if v := os.Getenv("TETHER_ADDR"); v != "" {
+	if v := os.Getenv("BUNTLINE_ADDR"); v != "" {
 		cfg.Addr = v
 	}
-	if v := os.Getenv("TETHER_ALLOWED_HOSTS"); v != "" {
+	if v := os.Getenv("BUNTLINE_ALLOWED_HOSTS"); v != "" {
 		cfg.AllowedHosts = strings.Split(v, ",")
 	}
-	if v := os.Getenv("TETHER_DATA_DIR"); v != "" {
+	if v := os.Getenv("BUNTLINE_DATA_DIR"); v != "" {
 		cfg.DataDir = v
 	}
-	if v := os.Getenv("TETHER_SESSIONS_DIR"); v != "" {
+	if v := os.Getenv("BUNTLINE_SESSIONS_DIR"); v != "" {
 		cfg.SessionsDir = v
 	}
-	if v := os.Getenv("TETHER_WORKDIR"); v != "" {
+	if v := os.Getenv("BUNTLINE_WORKDIR"); v != "" {
 		cfg.Workdir = v
 	}
 
 	// API keys in config files may reference env vars ("${DEEPSEEK_API_KEY}")
 	// so keys never live in a committed file. An env reference that expands
-	// to nothing is flagged loudly: tether was launched from a shell that
+	// to nothing is flagged loudly: buntline was launched from a shell that
 	// doesn't have the variable, and a silent empty key means a confusing
 	// 401 later.
 	cfg.APIKey = os.ExpandEnv(cfg.APIKey)
@@ -250,7 +250,7 @@ func LocalBaseURL(baseURL string) bool {
 }
 
 // WorkdirSettings are per-repository overrides from
-// <workdir>/.tether/settings.json: module toggles and the default
+// <workdir>/.buntline/settings.json: module toggles and the default
 // model/profile for sessions opened there.
 type WorkdirSettings struct {
 	Modules map[string]bool `json:"modules"`
@@ -267,7 +267,7 @@ type WorkdirSettings struct {
 // file is simply no overrides.
 func LoadWorkdirSettings(workdir string) WorkdirSettings {
 	var ws WorkdirSettings
-	data, err := os.ReadFile(filepath.Join(workdir, ".tether", "settings.json"))
+	data, err := os.ReadFile(filepath.Join(workdir, ".buntline", "settings.json"))
 	if err != nil {
 		return ws
 	}
@@ -346,7 +346,7 @@ func AllowRule(toolName, argsJSON string) string {
 // AddWorkdirAllow appends a rule to the repository's allowlist,
 // preserving whatever else settings.json holds.
 func AddWorkdirAllow(workdir, rule string) error {
-	path := filepath.Join(workdir, ".tether", "settings.json")
+	path := filepath.Join(workdir, ".buntline", "settings.json")
 	raw := map[string]json.RawMessage{}
 	if data, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(data, &raw)
@@ -398,12 +398,12 @@ func ProjectInstructions(workdir string) (name, content string) {
 }
 
 // defaultSystemPrompt is level 1 of the prompt stack: one prompt for the
-// whole of tether, deliberately minimal: models are trained to know what
+// whole of buntline, deliberately minimal: models are trained to know what
 // a coding agent is, mainstream 10k-token prompts buy little, and a fat
 // prompt measurably stops small models from calling tools. Level 2 is the
 // per-directory AGENTS.md, injected into the conversation, not here. Both
 // levels are visible in the UI.
-const defaultSystemPrompt = `You are tether, a coding agent with real filesystem and shell access through your tools.
+const defaultSystemPrompt = `You are buntline, a coding agent with real filesystem and shell access through your tools.
 
 Rules:
 - Questions about this project's files or code: read the actual files with tools first. Never answer from memory, never claim you lack file access.
@@ -414,7 +414,7 @@ Rules:
 // SystemPromptPath is the global override location (level 1, user-edited).
 func SystemPromptPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "tether", "system.md")
+	return filepath.Join(home, ".config", "buntline", "system.md")
 }
 
 // knownContextWindows maps model name prefixes to their documented
@@ -453,7 +453,7 @@ func KnownContextWindow(model string) int {
 // from config.toml so the app never rewrites a user-edited file.
 func MCPServersPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "tether", "mcp.json")
+	return filepath.Join(home, ".config", "buntline", "mcp.json")
 }
 
 // LoadMCPServers reads app-managed MCP servers. A missing file is an

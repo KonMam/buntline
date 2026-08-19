@@ -1,5 +1,5 @@
 // Package hooks runs project shell hooks around tool calls, configured in
-// <workdir>/.tether/hooks.json:
+// <workdir>/.buntline/hooks.json:
 //
 //	{
 //	  "pre_tool":  [{"match": "bash",      "command": "./scripts/guard.sh"}],
@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/tools"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/tools"
 )
 
 type Module struct{}
@@ -35,7 +35,7 @@ func (m *Module) Info() module.Info {
 	return module.Info{
 		ID:          "hooks",
 		Name:        "Hooks",
-		Description: "Run project scripts before and after tool calls (.tether/hooks.json); a pre hook can block a call.",
+		Description: "Run project scripts before and after tool calls (.buntline/hooks.json); a pre hook can block a call.",
 		Default:     true,
 	}
 }
@@ -63,7 +63,7 @@ type interceptor struct {
 // should take effect immediately; the file is tiny.
 func (i *interceptor) load() hookConfig {
 	var cfg hookConfig
-	data, err := os.ReadFile(filepath.Join(i.workdir, ".tether", "hooks.json"))
+	data, err := os.ReadFile(filepath.Join(i.workdir, ".buntline", "hooks.json"))
 	if err != nil {
 		return cfg
 	}

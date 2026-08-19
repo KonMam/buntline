@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/KonMam/tether/internal/config"
+	"github.com/KonMam/buntline/internal/config"
 )
 
 func guardFor(t *testing.T, cfg config.Config) http.Handler {
@@ -30,7 +30,7 @@ func TestGuardHost(t *testing.T) {
 		{"vite dev proxy keeps its own port", "localhost:7433", nil, "localhost:5173", 200},
 		{"rebinding dns name", "localhost:7433", nil, "evil.com:7433", 403},
 		{"ip literal is never rebinding", "0.0.0.0:7433", nil, "192.168.1.10:7433", 200},
-		{"bound dns name", "tether.lan:7433", nil, "tether.lan:7433", 200},
+		{"bound dns name", "buntline.lan:7433", nil, "buntline.lan:7433", 200},
 		{"foreign name with wildcard bind", "0.0.0.0:7433", nil, "evil.com:7433", 403},
 		{"allowed_hosts name", "0.0.0.0:7433", []string{"box.tail1234.ts.net"}, "box.tail1234.ts.net:7433", 200},
 		{"empty host", "localhost:7433", nil, "", 403},

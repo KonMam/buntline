@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/session"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/session"
 )
 
 func TestSpillSinkSaveAndRead(t *testing.T) {

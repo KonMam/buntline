@@ -1,4 +1,4 @@
-// Command tether runs the harness: a browser UI served on localhost by
+// Command buntline runs the harness: a browser UI served on localhost by
 // default, or a headless one-shot run with -p.
 package main
 
@@ -17,30 +17,30 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KonMam/tether/internal/agent"
-	"github.com/KonMam/tether/internal/config"
-	"github.com/KonMam/tether/internal/module"
-	"github.com/KonMam/tether/internal/module/checkpoints"
-	"github.com/KonMam/tether/internal/module/commands"
-	"github.com/KonMam/tether/internal/module/core"
-	"github.com/KonMam/tether/internal/module/diagnostics"
-	"github.com/KonMam/tether/internal/module/files"
-	gitmod "github.com/KonMam/tether/internal/module/git"
-	"github.com/KonMam/tether/internal/module/hooks"
-	"github.com/KonMam/tether/internal/module/mcpclient"
-	"github.com/KonMam/tether/internal/module/memory"
-	"github.com/KonMam/tether/internal/module/ollama"
-	"github.com/KonMam/tether/internal/module/search"
-	"github.com/KonMam/tether/internal/module/subagents"
-	"github.com/KonMam/tether/internal/module/tasks"
-	"github.com/KonMam/tether/internal/module/vision"
-	"github.com/KonMam/tether/internal/module/webfetch"
-	"github.com/KonMam/tether/internal/module/worktrees"
-	"github.com/KonMam/tether/internal/provider"
-	"github.com/KonMam/tether/internal/server"
-	"github.com/KonMam/tether/internal/session"
-	"github.com/KonMam/tether/internal/tools"
-	"github.com/KonMam/tether/web"
+	"github.com/KonMam/buntline/internal/agent"
+	"github.com/KonMam/buntline/internal/config"
+	"github.com/KonMam/buntline/internal/module"
+	"github.com/KonMam/buntline/internal/module/checkpoints"
+	"github.com/KonMam/buntline/internal/module/commands"
+	"github.com/KonMam/buntline/internal/module/core"
+	"github.com/KonMam/buntline/internal/module/diagnostics"
+	"github.com/KonMam/buntline/internal/module/files"
+	gitmod "github.com/KonMam/buntline/internal/module/git"
+	"github.com/KonMam/buntline/internal/module/hooks"
+	"github.com/KonMam/buntline/internal/module/mcpclient"
+	"github.com/KonMam/buntline/internal/module/memory"
+	"github.com/KonMam/buntline/internal/module/ollama"
+	"github.com/KonMam/buntline/internal/module/search"
+	"github.com/KonMam/buntline/internal/module/subagents"
+	"github.com/KonMam/buntline/internal/module/tasks"
+	"github.com/KonMam/buntline/internal/module/vision"
+	"github.com/KonMam/buntline/internal/module/webfetch"
+	"github.com/KonMam/buntline/internal/module/worktrees"
+	"github.com/KonMam/buntline/internal/provider"
+	"github.com/KonMam/buntline/internal/server"
+	"github.com/KonMam/buntline/internal/session"
+	"github.com/KonMam/buntline/internal/tools"
+	"github.com/KonMam/buntline/web"
 )
 
 // version is stamped by the release build via
@@ -49,7 +49,7 @@ var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "tether:", err)
+		fmt.Fprintln(os.Stderr, "buntline:", err)
 		os.Exit(1)
 	}
 }
@@ -75,7 +75,7 @@ func run() error {
 	)
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("tether", version)
+		fmt.Println("buntline", version)
 		return nil
 	}
 	cfg.BaseURL, cfg.Model, cfg.Addr = *baseURL, *model, *addr
@@ -103,7 +103,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("worktree: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "tether: working in worktree %s\n", path)
+		fmt.Fprintf(os.Stderr, "buntline: working in worktree %s\n", path)
 		cfg.Workdir = path
 	}
 
@@ -169,7 +169,7 @@ func runServer(cfg config.Config, open bool) error {
 	srv = server.New(cfg, store, web.Handler(), registry, log)
 
 	url := "http://" + cfg.Addr
-	log.Info("tether listening", "url", url, "model", cfg.Model, "base_url", cfg.BaseURL, "workdir", cfg.Workdir)
+	log.Info("buntline listening", "url", url, "model", cfg.Model, "base_url", cfg.BaseURL, "workdir", cfg.Workdir)
 	if open {
 		openBrowser(url)
 	}
