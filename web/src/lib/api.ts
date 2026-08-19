@@ -8,6 +8,8 @@ import type {
   MCPPromptInfo,
   MCPServerInfo,
   SearchHit,
+  MemoryOverview,
+  MemoryTopic,
   OllamaModel,
   Profile,
   ServerConfig,
@@ -183,9 +185,11 @@ export const api = {
     request<{ commands: SlashCommand[] }>(`/api/m/commands/list?session=${session}`),
   commandRender: (session: string, name: string, args: string) =>
     request<{ body: string }>('/api/m/commands/render', post({ session, name, args })),
-  memoryIndex: (workdir: string) =>
-    request<{ index: string; exists: boolean }>(
-      `/api/m/memory/index?workdir=${encodeURIComponent(workdir)}`,
+  memoryOverview: (workdir: string) =>
+    request<MemoryOverview>(`/api/m/memory/overview?workdir=${encodeURIComponent(workdir)}`),
+  memoryTopic: (workdir: string, name: string) =>
+    request<MemoryTopic>(
+      `/api/m/memory/topic?workdir=${encodeURIComponent(workdir)}&name=${encodeURIComponent(name)}`,
     ),
 
   gitStatus: (session: string) =>

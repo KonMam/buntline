@@ -291,3 +291,23 @@ export interface FileEntry {
   size?: number;
   count?: number;
 }
+
+// MemoryOverview is the memory module's UI surface: the capped index
+// plus the topic files, for the Memory panel.
+export interface MemoryTopicMeta {
+  name: string;
+  size: number;
+  modified: string;
+}
+
+export interface MemoryOverview {
+  index: string;
+  exists: boolean;
+  topics: MemoryTopicMeta[];
+}
+
+export interface MemoryTopic {
+  name: string;
+  content: string;
+  exists: boolean;
+}

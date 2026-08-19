@@ -3,6 +3,7 @@
   import TracePanel from './TracePanel.svelte';
   import FilesPanel from './FilesPanel.svelte';
   import AgentsPanel from './AgentsPanel.svelte';
+  import MemoryPanel from './MemoryPanel.svelte';
 
   let {
     session,
@@ -22,10 +23,11 @@
     memoryEnabled: boolean;
   } = $props();
 
-  let tab = $state<'trace' | 'files' | 'agents'>('trace');
+  let tab = $state<'trace' | 'files' | 'agents' | 'memory'>('trace');
   $effect(() => {
     if (!filesEnabled && tab === 'files') tab = 'trace';
     if (!subagentsEnabled && tab === 'agents') tab = 'trace';
+    if (!memoryEnabled && tab === 'memory') tab = 'trace';
   });
 </script>
 
@@ -35,14 +37,19 @@
     {#if filesEnabled}
       <button class:active={tab === 'files'} onclick={() => (tab = 'files')}>files</button>
     {/if}
+    {#if memoryEnabled}
+      <button class:active={tab === 'memory'} onclick={() => (tab = 'memory')}>memory</button>
+    {/if}
     {#if subagentsEnabled}
       <button class:active={tab === 'agents'} onclick={() => (tab = 'agents')}>agents</button>
     {/if}
   </nav>
   {#if tab === 'trace'}
-    <TracePanel {session} {checkpointsEnabled} {ollamaEnabled} {tasksEnabled} {memoryEnabled} />
+    <TracePanel {session} {checkpointsEnabled} {ollamaEnabled} {tasksEnabled} />
   {:else if tab === 'files'}
     <FilesPanel {session} />
+  {:else if tab === 'memory'}
+    <MemoryPanel {session} />
   {:else}
     <AgentsPanel {session} />
   {/if}

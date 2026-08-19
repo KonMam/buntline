@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/KonMam/buntline/internal/module"
 	"github.com/KonMam/buntline/internal/provider"
@@ -64,34 +65,90 @@ func (m *Module) Tools(workdir string) []tools.Tool {
 	}
 }
 
-// Routes: the UI reads the index through the module route (the trace
-// card in B3). The model reads memory through the tools.
+// Routes: the UI reads memory through the module routes (the Memory
+// panel): an overview of the index plus the topic files, and a single
+// topic's content. The model reads memory through the tools.
 func (m *Module) Routes() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		"GET /index": m.handleIndex,
+		"GET /overview": m.handleOverview,
+		"GET /topic":    m.handleTopic,
 	}
 }
 
-func (m *Module) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (m *Module) handleOverview(w http.ResponseWriter, r *http.Request) {
 	// The route is session-less: the workdir comes from the session's
-	// meta, which the server resolves. Kept minimal for B3; the model
-	// surface is the tools.
+	// meta, which the server resolves. Read-only, like the tools; the
+	// user edits memory by talking or by editing the file directly.
 	workdir := r.URL.Query().Get("workdir")
 	if workdir == "" {
 		http.Error(w, `{"error":"workdir is required"}`, http.StatusBadRequest)
 		return
 	}
-	index, err := os.ReadFile(filepath.Join(memoryDir(workdir), "MEMORY.md"))
+	dir := memoryDir(workdir)
+	index, exists := LoadIndex(dir)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"index":  index,
+		"exists": exists,
+		"topics": listTopicsMeta(dir),
+	})
+}
+
+func (m *Module) handleTopic(w http.ResponseWriter, r *http.Request) {
+	workdir := r.URL.Query().Get("workdir")
+	name := r.URL.Query().Get("name")
+	if workdir == "" || name == "" {
+		http.Error(w, `{"error":"workdir and name are required"}`, http.StatusBadRequest)
+		return
+	}
+	// Topic names are plain .md file names, exactly as the tools confine
+	// them: no separators, no traversal.
+	if strings.ContainsAny(name, "/\\") || name == "." || name == ".." || !strings.HasSuffix(name, ".md") {
+		http.Error(w, `{"error":"invalid topic name"}`, http.StatusBadRequest)
+		return
+	}
+	data, err := os.ReadFile(filepath.Join(memoryDir(workdir), name))
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"index": "", "exists": false})
+		_ = json.NewEncoder(w).Encode(map[string]any{"name": name, "content": "", "exists": false})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"index":  string(index),
-		"exists": true,
+		"name":    name,
+		"content": string(data),
+		"exists":  true,
 	})
+}
+
+// TopicMeta is one memory topic file in the overview: the UI shows the
+// list so the user can audit what the model has stashed where.
+type TopicMeta struct {
+	Name     string    `json:"name"`
+	Size     int64     `json:"size"`
+	Modified time.Time `json:"modified"`
+}
+
+// listTopicsMeta lists the memory directory's topic files (excluding
+// MEMORY.md) with their sizes and modification times, sorted by name.
+func listTopicsMeta(dir string) []TopicMeta {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []TopicMeta
+	for _, e := range entries {
+		if e.IsDir() || e.Name() == "MEMORY.md" || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		out = append(out, TopicMeta{Name: e.Name(), Size: info.Size(), Modified: info.ModTime()})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
 }
 
 // memoryDir returns the per-workdir memory directory.
@@ -134,24 +191,11 @@ func LoadIndex(dir string) (string, bool) {
 // ListTopics returns the memory directory's topic files (excluding
 // MEMORY.md), sorted.
 func ListTopics(dir string) []string {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
+	metas := listTopicsMeta(dir)
+	out := make([]string, 0, len(metas))
+	for _, m := range metas {
+		out = append(out, strings.TrimSuffix(m.Name, ".md"))
 	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		if e.Name() == "MEMORY.md" {
-			continue
-		}
-		if !strings.HasSuffix(e.Name(), ".md") {
-			continue
-		}
-		out = append(out, strings.TrimSuffix(e.Name(), ".md"))
-	}
-	sort.Strings(out)
 	return out
 }
 

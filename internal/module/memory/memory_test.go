@@ -3,6 +3,8 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -208,5 +210,123 @@ func TestMemoryToolsAfterModuleToggle(t *testing.T) {
 	}
 	if !strings.Contains(res.Content, "redis") {
 		t.Errorf("read after re-enable = %q", res.Content)
+	}
+}
+
+// TestOverviewRoute proves the UI surface: the overview returns the
+// capped index plus the topic files with sizes and modification times,
+// and reports absent memory honestly.
+func TestOverviewRoute(t *testing.T) {
+	m := &Module{}
+	workdir := t.TempDir()
+	dir := memoryDir(workdir)
+	w := &MemoryWrite{Dir: dir}
+	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
+		"content": "the build needs GOFLAGS=-mod=mod",
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
+		"file": "debugging", "content": "run with -race",
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/overview?workdir="+workdir, nil)
+	m.handleOverview(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("overview status = %d", rec.Code)
+	}
+	var out struct {
+		Index  string `json:"index"`
+		Exists bool   `json:"exists"`
+		Topics []struct {
+			Name     string `json:"name"`
+			Size     int64  `json:"size"`
+			Modified string `json:"modified"`
+		} `json:"topics"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("overview JSON: %v", err)
+	}
+	if !out.Exists || !strings.Contains(out.Index, "GOFLAGS") {
+		t.Errorf("overview index = %q (exists %v)", out.Index, out.Exists)
+	}
+	if len(out.Topics) != 1 || out.Topics[0].Name != "debugging.md" || out.Topics[0].Size == 0 || out.Topics[0].Modified == "" {
+		t.Errorf("overview topics = %+v", out.Topics)
+	}
+
+	// No memory at all: exists=false, empty topics, no error.
+	rec2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/overview?workdir="+t.TempDir(), nil)
+	m.handleOverview(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("empty overview status = %d", rec2.Code)
+	}
+	var empty struct {
+		Exists bool `json:"exists"`
+		Topics int  `json:"topics"`
+	}
+	if err := json.Unmarshal(rec2.Body.Bytes(), &empty); err != nil {
+		t.Fatalf("empty overview JSON: %v", err)
+	}
+	if empty.Exists || empty.Topics != 0 {
+		t.Errorf("empty overview = exists %v, topics %d", empty.Exists, empty.Topics)
+	}
+
+	// Missing workdir: 400.
+	rec3 := httptest.NewRecorder()
+	m.handleOverview(rec3, httptest.NewRequest(http.MethodGet, "/overview", nil))
+	if rec3.Code != http.StatusBadRequest {
+		t.Errorf("overview without workdir status = %d, want 400", rec3.Code)
+	}
+}
+
+// TestTopicRoute proves a topic's content loads through the route, and
+// that traversal attempts are rejected before touching the filesystem.
+func TestTopicRoute(t *testing.T) {
+	m := &Module{}
+	workdir := t.TempDir()
+	dir := memoryDir(workdir)
+	w := &MemoryWrite{Dir: dir}
+	if _, err := w.Run(context.Background(), mustArgs(t, map[string]string{
+		"file": "debugging", "content": "the flaky test is timing-sensitive",
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/topic?workdir="+workdir+"&name=debugging.md", nil)
+	m.handleTopic(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("topic status = %d", rec.Code)
+	}
+	var out struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+		Exists  bool   `json:"exists"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("topic JSON: %v", err)
+	}
+	if !out.Exists || !strings.Contains(out.Content, "timing-sensitive") {
+		t.Errorf("topic = %+v", out)
+	}
+
+	// Unknown topic: exists=false, not an error.
+	rec2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/topic?workdir="+workdir+"&name=nope.md", nil)
+	m.handleTopic(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("missing topic status = %d", rec2.Code)
+	}
+
+	// Traversal: rejected before any file access.
+	rec3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodGet, "/topic?workdir="+workdir+"&name=../evil.md", nil)
+	m.handleTopic(rec3, req3)
+	if rec3.Code != http.StatusBadRequest {
+		t.Errorf("traversal status = %d, want 400", rec3.Code)
 	}
 }

@@ -53,6 +53,8 @@
     switch (kind) {
       case 'instructions':
         return 'project instructions loaded';
+      case 'memory':
+        return 'memory loaded';
       case 'background':
         return 'background task finished';
       case 'tool_result':

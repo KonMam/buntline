@@ -561,37 +561,7 @@ func (s *Server) attach(id string) (*liveSession, error) {
 		// (fat system prompts stop small models from calling tools, and
 		// this keeps the system prefix stable for caching). Visible in
 		// the transcript: labeled, collapsed by the UI.
-		var seed []provider.Message
-		if name, content := config.ProjectInstructions(workdir); content != "" {
-			instr := provider.Message{
-				Role: provider.RoleUser,
-				Kind: "instructions",
-				Content: "Project instructions from " + name + " (background context for how to " +
-					"work in this repository, not a substitute for its actual files; read files " +
-					"with tools when asked about them):\n\n" + content,
-			}
-			ack := provider.Message{
-				Role: provider.RoleAssistant,
-				Kind: "instructions",
-				Content: "Understood. I'll follow these project instructions and read the actual " +
-					"files with my tools when asked about them.",
-			}
-			seed = append(seed, instr, ack)
-		}
-		// Memory index: the model's own cross-session notes, loaded at
-		// the start of every session in the same position as AGENTS.md.
-		// A file, not transcript state, so it survives compaction.
-		if s.modules != nil && s.modules.EnabledFor("memory", ws.Modules) {
-			if index, ok := memory.LoadIndexFor(workdir); ok && strings.TrimSpace(index) != "" {
-				seed = append(seed, provider.Message{
-					Role: provider.RoleUser,
-					Kind: "instructions",
-					Content: "Memory from earlier sessions (your own notes; keep them current with " +
-						"memory_write, read topics with memory_read):\n\n" + index,
-				})
-			}
-		}
-		if len(seed) > 0 {
+		if seed := s.seedMessages(workdir, ws.Modules); len(seed) > 0 {
 			ls.agent.SetMessages(seed)
 			for _, m := range seed {
 				_ = s.store.AppendMessage(id, &m)
@@ -600,6 +570,50 @@ func (s *Server) attach(id string) (*liveSession, error) {
 	}
 	s.live[id] = ls
 	return ls, nil
+}
+
+// seedMessages builds the messages that open a fresh transcript, in
+// order: project instructions (AGENTS.md) and the memory index. Both are
+// files, not transcript state, so they survive compaction by
+// construction; seedMessages is also re-applied after /compact because
+// compaction rewrites the transcript and would otherwise drop them from
+// the model's context (Claude Code re-reads CLAUDE.md for the same
+// reason). Kept as user messages, never the system prompt, so the
+// system prefix stays stable for caching.
+func (s *Server) seedMessages(workdir string, overrides map[string]bool) []provider.Message {
+	var seed []provider.Message
+	if name, content := config.ProjectInstructions(workdir); content != "" {
+		seed = append(seed,
+			provider.Message{
+				Role: provider.RoleUser,
+				Kind: "instructions",
+				Content: "Project instructions from " + name + " (background context for how to " +
+					"work in this repository, not a substitute for its actual files; read files " +
+					"with tools when asked about them):\n\n" + content,
+			},
+			provider.Message{
+				Role: provider.RoleAssistant,
+				Kind: "instructions",
+				Content: "Understood. I'll follow these project instructions and read the actual " +
+					"files with my tools when asked about them.",
+			},
+		)
+	}
+	// Memory index: the model's own cross-session notes, loaded at the
+	// start of every session in the same collapsed first-user-message
+	// position as AGENTS.md. Kind "memory" (not "instructions") so the
+	// UI labels the block as memory, distinct from project instructions.
+	if s.modules != nil && s.modules.EnabledFor("memory", overrides) {
+		if index, ok := memory.LoadIndexFor(workdir); ok && strings.TrimSpace(index) != "" {
+			seed = append(seed, provider.Message{
+				Role: provider.RoleUser,
+				Kind: "memory",
+				Content: "Memory from earlier sessions (your own notes; keep them current with " +
+					"memory_write, read topics with memory_read):\n\n" + index,
+			})
+		}
+	}
+	return seed
 }
 
 // dispatch is the single sink for agent events: persist what's durable,
@@ -632,6 +646,18 @@ func (s *Server) dispatch(sessionID string, ls *liveSession, ev agent.Event) {
 	case agent.EventCompact:
 		if err := s.store.ReplaceTranscript(sessionID, ls.agent.Messages()); err != nil {
 			s.log.Error("persist compacted transcript", "session", sessionID, "err", err)
+		}
+		// Compaction rewrites the transcript, dropping the instruction
+		// seeds (AGENTS.md, memory). They are files, not transcript
+		// state: re-inject them so the model keeps its project
+		// instructions and memory after the summary. Appended after the
+		// summary so the summary's prefix position stays stable for
+		// caching, matching the order the store now holds.
+		if seed := s.seedMessages(ls.workdir, ls.overrides); len(seed) > 0 {
+			ls.agent.SetMessages(append(ls.agent.Messages(), seed...))
+			for _, m := range seed {
+				_ = s.store.AppendMessage(sessionID, &m)
+			}
 		}
 		s.persistEvent(sessionID, ev)
 	default:

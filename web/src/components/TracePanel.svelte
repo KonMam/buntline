@@ -6,20 +6,17 @@
   import { formatDuration, formatTokens, prettyArgs } from '../lib/format';
   import DiffView from './DiffView.svelte';
   import TasksCard from './TasksCard.svelte';
-  import MemoryCard from './MemoryCard.svelte';
 
   let {
     session,
     checkpointsEnabled,
     ollamaEnabled,
     tasksEnabled,
-    memoryEnabled,
   }: {
     session: SessionState;
     checkpointsEnabled: boolean;
     ollamaEnabled: boolean;
     tasksEnabled: boolean;
-    memoryEnabled: boolean;
   } = $props();
 
   const turns = $derived(buildTrace(session.activity));
@@ -182,12 +179,6 @@
   {#if tasksEnabled && session.tasks.length > 0}
     <div class="tasks-wrap">
       <TasksCard tasks={session.tasks} />
-    </div>
-  {/if}
-
-  {#if memoryEnabled}
-    <div class="memory-wrap">
-      <MemoryCard {session} />
     </div>
   {/if}
 
