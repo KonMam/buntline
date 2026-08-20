@@ -62,6 +62,17 @@ export const api = {
       `/api/sessions/${id}/messages`,
       post({ content, images, attachments }),
     ),
+  // Non-image attachments upload as multipart; the server stores them in
+  // the session's workdir and returns the workdir-relative path that the
+  // message send accepts as an attachment.
+  uploadAttachment: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return request<{ path: string }>(`/api/sessions/${id}/attachments`, {
+      method: 'POST',
+      body: fd,
+    });
+  },
   compact: (id: string) => request<void>(`/api/sessions/${id}/compact`, { method: 'POST' }),
   fork: (id: string, keep: number) =>
     request<SessionMeta>(`/api/sessions/${id}/fork`, post({ keep })),

@@ -68,21 +68,43 @@
     }
   });
 
-  // Images attached by pasting or picking, sent as data URLs alongside
-  // the text. Pasting covers desktop; the attach button covers mobile
-  // (where there is no clipboard paste gesture) via a hidden file input.
+  // Attachments attached by pasting or picking. Images stay data URLs
+  // (the vision pipeline and the transcript render them as images);
+  // every other file is uploaded to the session's attachment store and
+  // travels as a workdir-relative path, entering the model's context
+  // through the same read_file exchange @-mentions use. Pasting covers
+  // desktop; the attach button covers mobile (where there is no
+  // clipboard paste gesture) via a hidden file input.
   let images = $state<string[]>([]);
+  let uploads = $state<{ path: string; name: string }[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   const imageCap = 8 * 1024 * 1024;
+  // The server folds attachment paths into a synthetic read_file
+  // exchange capped at four; mirror the cap so a pick never silently
+  // drops a file the UI still shows as attached.
+  const uploadCap = 4;
 
-  function addImages(files: Iterable<File>) {
+  // addFiles routes each picked/pasted file: images stay data URLs
+  // (the vision pipeline and the transcript render them as images),
+  // everything else uploads to the session and attaches as a path.
+  async function addFiles(files: Iterable<File>) {
     for (const file of files) {
-      if (!file.type.startsWith('image/') || file.size > imageCap) continue;
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') images = [...images, reader.result];
-      };
-      reader.readAsDataURL(file);
+      if (file.type.startsWith('image/')) {
+        if (file.size > imageCap) continue;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') images = [...images, reader.result];
+        };
+        reader.readAsDataURL(file);
+        continue;
+      }
+      if (!session.meta || uploads.length >= uploadCap) continue;
+      try {
+        const res = await api.uploadAttachment(session.meta.id, file);
+        uploads = [...uploads, { path: res.path, name: file.name }];
+      } catch (e) {
+        session.error = e instanceof Error ? e.message : String(e);
+      }
     }
   }
 
@@ -91,25 +113,31 @@
     if (!items) return;
     const files: File[] = [];
     for (const item of items) {
-      if (!item.type.startsWith('image/')) continue;
+      if (!item.kind.startsWith('file')) continue;
       const file = item.getAsFile();
-      if (!file || file.size > imageCap) continue;
+      if (!file) continue;
+      if (file.type.startsWith('image/') && file.size > imageCap) continue;
+      if (!file.type.startsWith('image/') && !(session.meta && uploads.length < uploadCap)) continue;
       files.push(file);
     }
     if (files.length === 0) return;
     e.preventDefault();
-    addImages(files);
+    void addFiles(files);
   }
 
   function onpick(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
-    if (input.files) addImages(input.files);
+    if (input.files) void addFiles(input.files);
     // Reset so picking the same file again re-fires onchange.
     input.value = '';
   }
 
   function removeImage(i: number) {
     images = images.filter((_, idx) => idx !== i);
+  }
+
+  function removeUpload(i: number) {
+    uploads = uploads.filter((_, idx) => idx !== i);
   }
 
   // @-mentions: type @ and a path fragment to pin a file's real content
@@ -273,7 +301,7 @@
 
   async function submit() {
     const t = text.trim();
-    if (!t && images.length === 0) return;
+    if (!t && images.length === 0 && uploads.length === 0) return;
     // While a question card is open, the send button answers the
     // question instead of starting a new message: the model is waiting
     // on a human decision, and the turn continues with the answer.
@@ -294,9 +322,11 @@
       }
     }
     const imgs = images;
+    const up = uploads;
     text = '';
     images = [];
-    const attachments = mentionedPaths(t);
+    uploads = [];
+    const attachments = [...mentionedPaths(t), ...up.map((u) => u.path)];
     void session.send(
       t,
       imgs.length > 0 ? imgs : undefined,
@@ -416,7 +446,7 @@
     {/if}
 
     <div class="box">
-      {#if images.length > 0}
+      {#if images.length > 0 || uploads.length > 0}
         <div class="attachments">
           {#each images as img, i (i)}
             <div class="attachment">
@@ -426,6 +456,20 @@
                 onclick={() => removeImage(i)}
                 title="Remove image"
                 aria-label="Remove image"
+              >
+                <Icon name="close" size={10} />
+              </button>
+            </div>
+          {/each}
+          {#each uploads as up, i (up.path)}
+            <div class="attachment file" title={up.name}>
+              <Icon name="file" size={14} />
+              <span class="file-name">{up.name}</span>
+              <button
+                class="remove"
+                onclick={() => removeUpload(i)}
+                title="Remove file"
+                aria-label="Remove file"
               >
                 <Icon name="close" size={10} />
               </button>
@@ -459,8 +503,8 @@
         <button
           class="attach icon-btn"
           onclick={() => fileInput?.click()}
-          title="Attach an image"
-          aria-label="Attach an image"
+          title="Attach an image or file"
+          aria-label="Attach an image or file"
         >
           <Icon name="paperclip" size={15} />
         </button>
@@ -482,7 +526,7 @@
           <button
             class="send"
             onclick={submit}
-            disabled={!text.trim() && images.length === 0}
+            disabled={!text.trim() && images.length === 0 && uploads.length === 0}
             title="Send message"
             aria-label="Send message"
           >
@@ -493,7 +537,7 @@
       <input
         class="file-input"
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf,text/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.json,.md,.txt,.log,.zip,.gz,.tar"
         multiple
         bind:this={fileInput}
         onchange={onpick}
@@ -588,6 +632,31 @@
     object-fit: cover;
     border-radius: 6px;
     border: 1px solid var(--border);
+  }
+  /* Non-image attachments render as a chip: icon + name, removable like
+     an image thumbnail. */
+  .attachment.file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 180px;
+    height: 52px;
+    padding: 0 26px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .attachment.file .file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .attachment.file .remove {
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
   }
   .attachment .remove {
     position: absolute;
@@ -707,26 +776,21 @@
     color: var(--danger);
     background: var(--surface-2);
   }
-  /* Narrow composer: the mode/model dropdowns move to their own
-     full-width line so their labels never fight the attach and send
-     buttons for space. */
+  /* Narrow composer: mode/model keep their own space but stay on the
+     same line as attach and send — one balanced row (paperclip · mode ·
+     model · send), the labels truncating when the box squeezes instead
+     of the row wrapping into a sparse two-tier layout. The dropdown
+     triggers cap at the wrapper and ellipsize, so a docked side panel
+     (which squeezes the chat below the mobile breakpoint too) gets the
+     same treatment as a phone. */
   @container (max-width: 620px) {
-    .bottom {
-      flex-wrap: wrap;
-    }
-    .attach {
-      order: 1;
-    }
-    .actions {
-      order: 2;
-      margin-left: auto;
-    }
     .selectors {
-      order: 3;
-      flex: 1 1 100%;
+      flex: 1;
+      min-width: 0;
     }
     .selectors :global(.dropdown) {
       flex: 1;
+      min-width: 0;
     }
   }
   /* Mobile: 16px input text (below that iOS zooms the page on focus,

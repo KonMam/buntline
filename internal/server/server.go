@@ -5,6 +5,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -229,6 +230,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sessions/{id}/events", s.handleEvents)
 	mux.HandleFunc("GET /api/events", s.handleGlobalEvents)
 	mux.HandleFunc("POST /api/sessions/{id}/messages", s.handleSendMessage)
+	mux.HandleFunc("POST /api/sessions/{id}/attachments", s.handleUploadAttachment)
 	mux.HandleFunc("POST /api/sessions/{id}/compact", s.handleCompact)
 	mux.HandleFunc("POST /api/sessions/{id}/interrupt", s.handleInterrupt)
 	mux.HandleFunc("POST /api/sessions/{id}/model", s.handleSetModel)
@@ -1115,7 +1117,7 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 		Attachments []string `json:"attachments"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil ||
-		(strings.TrimSpace(in.Content) == "" && len(in.Images) == 0) {
+		(strings.TrimSpace(in.Content) == "" && len(in.Images) == 0 && len(in.Attachments) == 0) {
 		httpError(w, http.StatusBadRequest, fmt.Errorf("content is required"))
 		return
 	}
@@ -1211,8 +1213,11 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 
 const attachmentCap = 24 * 1024
 
-// readAttachment reads an @-mentioned file, confined to the session's
-// workdir and capped.
+// readAttachment reads an @-mentioned file (or an uploaded attachment),
+// confined to the session's workdir and capped. Binary payloads are not
+// inlined: the model gets a notice naming the file instead of raw bytes
+// that would corrupt its context (a PDF or archive is still attached —
+// the path is in the transcript — but its contents need a tool).
 func readAttachment(workdir, path string) (string, error) {
 	resolved, err := tools.Workdir(workdir).Resolve(path)
 	if err != nil {
@@ -1222,10 +1227,125 @@ func readAttachment(workdir, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if looksLikeBinary(data) {
+		return fmt.Sprintf("(binary file %s, %d bytes — not inlined as text)", path, len(data)), nil
+	}
 	if len(data) > attachmentCap {
 		return string(data[:attachmentCap]) + "\n… (truncated)", nil
 	}
 	return string(data), nil
+}
+
+// looksLikeBinary reports whether data is probably not text worth
+// inlining. Signature sniffing (http.DetectContentType) catches PDFs,
+// archives, images, and unknown binary blobs; a NUL byte in the first
+// block catches UTF-16 text and anything else the sniffer labels text.
+func looksLikeBinary(data []byte) bool {
+	ct := http.DetectContentType(data)
+	if !strings.HasPrefix(ct, "text/") {
+		return true
+	}
+	block := data
+	if len(block) > 8192 {
+		block = block[:8192]
+	}
+	return bytes.IndexByte(block, 0) >= 0
+}
+
+const uploadCap = 16 << 20 // per-file cap for uploaded attachments
+
+// handleUploadAttachment stores one multipart file for a session and
+// returns its workdir-relative path, ready to send as an attachment.
+// Files land in <workdir>/.buntline/attachments/<session>/ — inside the
+// workdir so the read_file exchange can reach them, under a dot-directory
+// the file browser skips so uploads never pollute the project listing.
+func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	meta, err := s.store.GetMeta(id)
+	if err != nil {
+		httpError(w, http.StatusNotFound, err)
+		return
+	}
+	workdir := meta.Workdir
+	if workdir == "" {
+		workdir = s.cfg.Workdir
+	}
+	if err := r.ParseMultipartForm(uploadCap); err != nil {
+		httpError(w, http.StatusBadRequest, fmt.Errorf("attachment upload: %v", err))
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		httpError(w, http.StatusBadRequest, fmt.Errorf("attachment upload: file part is required"))
+		return
+	}
+	defer func() { _ = file.Close() }()
+	if header.Size > uploadCap {
+		httpError(w, http.StatusBadRequest, fmt.Errorf("attachment too large: %d bytes (max %d)", header.Size, uploadCap))
+		return
+	}
+	name := sanitizeAttachmentName(header.Filename)
+	if name == "" {
+		httpError(w, http.StatusBadRequest, fmt.Errorf("attachment upload: invalid filename"))
+		return
+	}
+	dir := filepath.Join(workdir, ".buntline", "attachments", id)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		httpError(w, http.StatusInternalServerError, err)
+		return
+	}
+	dst := uniquePath(filepath.Join(dir, name))
+	out, err := os.Create(dst)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if _, err := io.Copy(out, file); err != nil {
+		_ = out.Close()
+		httpError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := out.Close(); err != nil {
+		httpError(w, http.StatusInternalServerError, err)
+		return
+	}
+	rel, err := filepath.Rel(workdir, dst)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, map[string]string{"path": filepath.ToSlash(rel)})
+}
+
+// sanitizeAttachmentName reduces a client filename to a safe basename:
+// no separators, no leading dots, no empty or dot-only names.
+func sanitizeAttachmentName(name string) string {
+	name = strings.TrimSpace(filepath.Base(name))
+	if name == "." || name == ".." {
+		return ""
+	}
+	name = strings.TrimLeft(name, ".")
+	if name == "" || len(name) > 200 {
+		return ""
+	}
+	return name
+}
+
+// uniquePath returns p, or p with a numeric suffix (-1, -2, …) when the
+// name is taken, so re-uploading a file never overwrites an earlier one.
+func uniquePath(p string) string {
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		return p
+	}
+	dir, base := filepath.Split(p)
+	ext := filepath.Ext(base)
+	stem := strings.TrimSuffix(base, ext)
+	for i := 1; ; i++ {
+		cand := filepath.Join(dir, fmt.Sprintf("%s-%d%s", stem, i, ext))
+		if _, err := os.Stat(cand); os.IsNotExist(err) {
+			return cand
+		}
+	}
 }
 
 // attachmentExchange turns @-mentioned files into a synthetic read_file
