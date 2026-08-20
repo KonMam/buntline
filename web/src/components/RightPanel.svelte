@@ -4,6 +4,7 @@
   import FilesPanel from './FilesPanel.svelte';
   import AgentsPanel from './AgentsPanel.svelte';
   import MemoryPanel from './MemoryPanel.svelte';
+  import { fileOpen } from '../lib/fileOpen.svelte';
 
   let {
     session,
@@ -28,6 +29,11 @@
     if (!filesEnabled && tab === 'files') tab = 'trace';
     if (!subagentsEnabled && tab === 'agents') tab = 'trace';
     if (!memoryEnabled && tab === 'memory') tab = 'trace';
+  });
+  // A file link clicked in the chat opens the browser on the files tab.
+  $effect(() => {
+    const r = fileOpen.request;
+    if (r && r.sessionId === session.meta?.id && filesEnabled) tab = 'files';
   });
 </script>
 

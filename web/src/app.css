@@ -245,6 +245,20 @@ pre {
   color: var(--accent);
 }
 
+/* File paths in model output, thinking, and tool calls: clickable, open
+   the file in the browser panel (click handling lives in Chat.svelte).
+   A faint underline reads as a link without shouting over the code font. */
+a.file-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent), transparent 65%);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+a.file-link:hover {
+  text-decoration-color: var(--accent);
+}
+
 /* highlight.js syntax scheme: neutral grays, accent reserved for
    literal values, comments faded */
 .hljs-title,

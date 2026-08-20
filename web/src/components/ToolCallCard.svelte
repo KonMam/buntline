@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Message, ToolCall } from '../lib/types';
   import { prettyArgs } from '../lib/format';
+  import { linkifyText } from '../lib/markdown';
   import DiffView from './DiffView.svelte';
   import Icon from './Icon.svelte';
 
@@ -36,6 +37,10 @@
   // yet, if the placeholder has not landed.
   const running = $derived(bg.has(call.id) && (result === null || result.startsWith('[started ')));
   const failed = $derived(result !== null && /^error:/i.test(result));
+  // File paths in the args and the result are clickable (open in the
+  // file browser; the chat thread handles the clicks).
+  const argsHtml = $derived(linkifyText(call.args));
+  const resultHtml = $derived(result !== null ? linkifyText(result) : '');
 </script>
 
 <details class="call" class:running>
@@ -49,11 +54,11 @@
       <span class="fail-icon"><Icon name="alert" size={12} /></span>
     {/if}
   </summary>
-  <pre class="args">{call.args}</pre>
+  <pre class="args">{@html argsHtml}</pre>
   {#if diff}
     <DiffView {diff} />
   {:else if result !== null && !running}
-    <pre class="result">{result}</pre>
+    <pre class="result">{@html resultHtml}</pre>
   {:else if running}
     <div class="pending">
       <i class="spinner"></i>

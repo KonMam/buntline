@@ -13,6 +13,7 @@
   import { api } from '../lib/api';
   import type { NotificationCenter } from '../lib/notifications.svelte';
   import NotificationBell from './NotificationBell.svelte';
+  import { requestFileOpen } from '../lib/fileOpen.svelte';
 
   let showPrompt = $state(false);
 
@@ -133,6 +134,20 @@
     scrollToBottom();
   }
 
+  // File links (a[data-file] rendered by markdown.ts) open in the file
+  // browser: show the side panel and hand the path to it. Delegated here
+  // because the links live inside @html content in several components.
+  function onThreadClick(e: MouseEvent) {
+    const el = (e.target as Element | null)?.closest?.('a[data-file]');
+    if (!el || !session.meta) return;
+    e.preventDefault();
+    if (!filesEnabled) return;
+    const path = el.getAttribute('data-file');
+    if (!path) return;
+    showPanel = true;
+    requestFileOpen(session.meta.id, path);
+  }
+
   $effect(() => {
     // Touch the reactive values that grow during streaming, then keep the
     // view pinned to the bottom. The rendered stream html re-flows the
@@ -198,7 +213,11 @@
   </header>
 
   <section bind:this={scroller} onscroll={onScroll} onwheel={onWheel}>
-    <div class="thread">
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_static_element_interactions
+      The click is event delegation for the a[data-file] links inside the
+      thread (@html content from several components); the container itself
+      is a scroll viewport, not an interactive element. -->
+    <div class="thread" onclick={onThreadClick}>
       {#if hiddenCount > 0}
         <button class="show-earlier" onclick={() => (showAll = true)}>
           Show {hiddenCount} earlier {hiddenCount === 1 ? 'message' : 'messages'}

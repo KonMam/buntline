@@ -5,6 +5,7 @@
   import { copyText } from '../lib/clipboard';
   import { formatBytes } from '../lib/format';
   import { highlightFile } from '../lib/markdown';
+  import { fileOpen } from '../lib/fileOpen.svelte';
   import Icon from './Icon.svelte';
 
   let { session }: { session: SessionState } = $props();
@@ -75,6 +76,40 @@
     parts.pop();
     void loadDir(parts.length ? parts.join('/') : '.');
   }
+
+  // A file link clicked in the chat lands here: view the file, or browse
+  // the directory when the path points at one. Absolute paths under the
+  // session's workdir are trimmed to relative form first.
+  async function openPath(p: string) {
+    if (!session.meta) return;
+    const wd = session.meta.workdir;
+    const rel =
+      p.startsWith('/') && wd && (p === wd || p.startsWith(wd + '/'))
+        ? p.slice(wd.length).replace(/^\/+/, '') || '.'
+        : p;
+    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '.';
+    try {
+      const res = await api.filesRead(session.meta.id, rel);
+      // It is a file: show its parent directory listing behind it, so the
+      // crumbs and "up" still navigate away.
+      await loadDir(dir);
+      viewing = { path: rel, size: null, ...res };
+      error = null;
+    } catch {
+      // Not a file (or unreadable): treat it as a directory.
+      void loadDir(rel);
+    }
+  }
+
+  // One request per click (n increments); consumed here so a stale
+  // request cannot fire again when the panel remounts later.
+  $effect(() => {
+    const r = fileOpen.request;
+    if (!r) return;
+    fileOpen.request = null;
+    if (r.sessionId !== session.meta?.id) return;
+    void openPath(r.path);
+  });
 
   function touched(name: string): boolean {
     const p = path === '.' ? name : `${path}/${name}`;

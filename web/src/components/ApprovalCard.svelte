@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PendingApproval } from '../lib/types';
+  import { linkifyText } from '../lib/markdown';
 
   let {
     approval,
@@ -16,6 +17,8 @@
       return approval.tool_args;
     }
   });
+  // File paths in the args are clickable, like on the tool call cards.
+  const argsHtml = $derived(linkifyText(args));
 </script>
 
 <div class="card">
@@ -23,7 +26,7 @@
     <span class="tool">{approval.tool_name}</span>
     <span class="asks">wants to run</span>
   </div>
-  <pre>{args}</pre>
+  <pre>{@html argsHtml}</pre>
   <div class="actions">
     <button class="allow" onclick={() => decide('allow')}>allow once</button>
     <button class="allow-session" onclick={() => decide('allow_session')}>
