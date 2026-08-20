@@ -18,8 +18,9 @@ import (
 )
 
 // newAttachmentTestServer builds a bare server with one session whose
-// workdir is a fresh temp dir, and returns both.
-func newAttachmentTestServer(t *testing.T) (*Server, *session.Store, string, string) {
+// workdir is a fresh temp dir, and returns the server, session id, and
+// workdir.
+func newAttachmentTestServer(t *testing.T) (*Server, string, string) {
 	t.Helper()
 	store, err := session.NewStore(t.TempDir())
 	if err != nil {
@@ -32,7 +33,7 @@ func newAttachmentTestServer(t *testing.T) (*Server, *session.Store, string, str
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s, store, meta.ID, workdir
+	return s, meta.ID, workdir
 }
 
 // uploadAttachment posts one file to the session's attachment endpoint.
@@ -81,7 +82,7 @@ func waitForToolMessage(t *testing.T, store *session.Store, id, want string) {
 // <workdir>/.buntline/attachments/<session>/ and the response carries the
 // workdir-relative path with forward slashes.
 func TestUploadAttachmentStoresInsideWorkdir(t *testing.T) {
-	s, _, id, workdir := newAttachmentTestServer(t)
+	s, id, workdir := newAttachmentTestServer(t)
 	rr := uploadAttachment(t, s, id, "notes.txt", "hello attachment")
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %s)", rr.Code, rr.Body.String())
@@ -109,7 +110,7 @@ func TestUploadAttachmentStoresInsideWorkdir(t *testing.T) {
 // TestUploadAttachmentDedupesNames: a second upload with the same name
 // gets a numeric suffix instead of overwriting the first file.
 func TestUploadAttachmentDedupesNames(t *testing.T) {
-	s, _, id, workdir := newAttachmentTestServer(t)
+	s, id, workdir := newAttachmentTestServer(t)
 	if rr := uploadAttachment(t, s, id, "same.txt", "first"); rr.Code != http.StatusOK {
 		t.Fatalf("first upload status = %d (body %s)", rr.Code, rr.Body.String())
 	}
@@ -149,7 +150,7 @@ func metaID(id string) string { return id }
 // TestUploadAttachmentSanitizesNames: path separators and leading dots
 // are stripped so the stored file cannot escape the attachments dir.
 func TestUploadAttachmentSanitizesNames(t *testing.T) {
-	s, _, id, workdir := newAttachmentTestServer(t)
+	s, id, workdir := newAttachmentTestServer(t)
 	// Each name must end up stored as a clean basename (or, for a name
 	// that reduces to nothing after sanitizing, be refused).
 	cases := []struct {
@@ -205,7 +206,7 @@ func TestUploadAttachmentSanitizesNames(t *testing.T) {
 // TestUploadAttachmentMissingFile: a multipart body without a file part
 // is a 400, not a server error.
 func TestUploadAttachmentMissingFile(t *testing.T) {
-	s, _, id, _ := newAttachmentTestServer(t)
+	s, id, _ := newAttachmentTestServer(t)
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	if err := mw.Close(); err != nil {

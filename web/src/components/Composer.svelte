@@ -117,7 +117,8 @@
       const file = item.getAsFile();
       if (!file) continue;
       if (file.type.startsWith('image/') && file.size > imageCap) continue;
-      if (!file.type.startsWith('image/') && !(session.meta && uploads.length < uploadCap)) continue;
+      if (!file.type.startsWith('image/') && !(session.meta && uploads.length < uploadCap))
+        continue;
       files.push(file);
     }
     if (files.length === 0) return;
